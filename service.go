@@ -2,6 +2,7 @@ package gate
 
 import (
 	"fmt"
+	"github.com/andyzhou/gate/json"
 	"github.com/andyzhou/gate/proto"
 	"github.com/andyzhou/gate/rpc"
 	"google.golang.org/grpc"
@@ -10,13 +11,14 @@ import (
 )
 
 /*
- * gate rpc service, base on `grpc`
+ * gate service
  *
- * - for service side
+ * - api for service side
+ * - base on g-rpc
  */
 
 
-//rpc service info
+//service info
 type Service struct {
 	address string `rpc service address`
 	rpc *rpc.Service `rpc service instance`
@@ -45,6 +47,18 @@ func (r *Service) Stop() {
 	if r.rpc != nil {
 		r.rpc.Quit()
 	}
+}
+
+//set cb for bind or unbind node
+//if sub service send `MessageIdOfBindOrUnbind`, need call the cb
+func (r *Service) SetCBForBindUnBindNode(cb func(obj *json.BindJson) bool) bool {
+	return r.rpc.SetCBForBindUnBindNode(cb)
+}
+
+//set cb for sub service response cast
+//if have response from sub service, need call the cb
+func (r *Service) SetCBForResponseCast(cb func(connIds []uint32, messageId uint32, data []byte) bool) bool {
+	return r.rpc.SetCBForResponseCast(cb)
 }
 
 /////////////////

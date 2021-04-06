@@ -1,2 +1,5 @@
 # gate
-tcp/rpc gate bridage interface
+ - tcp/rpc gate bridge interface
+ - use rpc stream mode for performance
+ 
+ 

@@ -16,6 +16,7 @@ type IClient interface {
 	CastDataToOneKind(kind string, in *pb.ByteMessage) bool
 	CastDataByTag(tag string, in *pb.ByteMessage) bool
 	CastData(address string, in *pb.ByteMessage) bool
+	CastDataToAll(in *pb.ByteMessage) bool
 
 	//base opt
 	BindNodeTags(fromAddr string, bindJson *json.BindJson) bool
