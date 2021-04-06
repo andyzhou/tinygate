@@ -10,7 +10,7 @@ import (
 
  type IService interface {
  	Quit()
- 	ClientReq(req *pb.ByteMessage) bool
+ 	SendClientReq(req *pb.ByteMessage) bool
  	GetRemoteAddr() string
  	GetKind() string
  	GetTag() string

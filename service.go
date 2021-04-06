@@ -2,6 +2,7 @@ package gate
 
 import (
 	"fmt"
+	"github.com/andyzhou/gate/face"
 	"github.com/andyzhou/gate/json"
 	"github.com/andyzhou/gate/proto"
 	"github.com/andyzhou/gate/rpc"
@@ -34,8 +35,6 @@ func NewService(port int) *Service {
 		rpc:rpc.NewService(),
 		service:nil,
 	}
-	//create rpc service
-	this.createService()
 	return this
 }
 
@@ -49,6 +48,12 @@ func (r *Service) Stop() {
 	}
 }
 
+//start
+func (r *Service) Start() {
+	//create rpc service
+	r.createService()
+}
+
 //set cb for bind or unbind node
 //if sub service send `MessageIdOfBindOrUnbind`, need call the cb
 func (r *Service) SetCBForBindUnBindNode(cb func(obj *json.BindJson) bool) bool {
@@ -59,6 +64,25 @@ func (r *Service) SetCBForBindUnBindNode(cb func(obj *json.BindJson) bool) bool 
 //if have response from sub service, need call the cb
 func (r *Service) SetCBForResponseCast(cb func(connIds []uint32, messageId uint32, data []byte) bool) bool {
 	return r.rpc.SetCBForResponseCast(cb)
+}
+
+//send data to assigned kind gate client
+func (r *Service) SendClientReqByKind(kind string, req *gate.ByteMessage) bool {
+	//get node face
+	nodeFace := face.RunInterFace.GetNodeFace()
+
+	//get node tag by kind
+	nodeTag := nodeFace.PickNode(kind)
+
+	//get service by kind and tag
+	subService := nodeFace.GetServiceByTag(kind, nodeTag)
+	if subService == nil {
+		return false
+	}
+
+	//cast data
+	bRet := subService.SendClientReq(req)
+	return bRet
 }
 
 /////////////////

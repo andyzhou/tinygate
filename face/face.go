@@ -16,6 +16,11 @@ type InterFace struct {
 //declare global variable
 var RunInterFace *InterFace
 
+//init
+func init()  {
+	RunInterFace = NewInterFace()
+}
+
 //construct
 func NewInterFace() *InterFace {
 	this := &InterFace{

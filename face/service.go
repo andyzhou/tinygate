@@ -37,6 +37,8 @@ func NewService(
 		clientReqChan:make(chan pb.ByteMessage, define.ClientReqChanSize),
 		closeChan:make(chan bool, 1),
 	}
+	//spawn main process
+	go this.runMainProcess()
 	return this
 }
 
@@ -50,7 +52,8 @@ func (f *Service) Quit() {
 }
 
 //tcp client request on current service
-func (f *Service) ClientReq(req *pb.ByteMessage) (bRet bool) {
+//send request to sub gate service(client)
+func (f *Service) SendClientReq(req *pb.ByteMessage) (bRet bool) {
 	//basic check
 	if req == nil || req.MessageId < 0 {
 		bRet = false
