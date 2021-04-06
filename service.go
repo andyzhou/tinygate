@@ -66,13 +66,52 @@ func (r *Service) SetCBForResponseCast(cb func(connIds []uint32, messageId uint3
 	return r.rpc.SetCBForResponseCast(cb)
 }
 
-//send data to assigned kind gate client
-func (r *Service) SendClientReqByKind(kind string, req *gate.ByteMessage) bool {
+////////////////////////////
+//multi kind send data
+////////////////////////////
+
+//send data to assigned address of gate client
+func (r *Service) SendClientReqByAddress(address string, req *gate.ByteMessage) bool {
+	//basic check
+	if address == "" || req == nil {
+		return false
+	}
+
 	//get node face
 	nodeFace := face.RunInterFace.GetNodeFace()
+	if nodeFace == nil {
+		return false
+	}
+
+	//get service by address
+	subService := nodeFace.GetService(address)
+	if subService == nil {
+		return false
+	}
+
+	//cast data
+	bRet := subService.SendClientReq(req)
+	return bRet
+}
+
+//send data to assigned kind gate client
+func (r *Service) SendClientReqByKind(kind string, req *gate.ByteMessage) bool {
+	//basic check
+	if kind == "" || req == nil {
+		return false
+	}
+
+	//get node face
+	nodeFace := face.RunInterFace.GetNodeFace()
+	if nodeFace == nil {
+		return false
+	}
 
 	//get node tag by kind
 	nodeTag := nodeFace.PickNode(kind)
+	if nodeTag == "" {
+		return false
+	}
 
 	//get service by kind and tag
 	subService := nodeFace.GetServiceByTag(kind, nodeTag)
@@ -83,6 +122,32 @@ func (r *Service) SendClientReqByKind(kind string, req *gate.ByteMessage) bool {
 	//cast data
 	bRet := subService.SendClientReq(req)
 	return bRet
+}
+
+//send data to all gate clients
+func (r *Service) SendClientReqToAll(req *gate.ByteMessage) bool {
+	//basic check
+	if req == nil {
+		return false
+	}
+
+	//get node face
+	nodeFace := face.RunInterFace.GetNodeFace()
+	if nodeFace == nil {
+		return false
+	}
+
+	//get all sub service
+	allSubService := nodeFace.GetAllService()
+	if allSubService == nil || len(allSubService) <= 0 {
+		return false
+	}
+
+	//send one by one
+	for _, service := range allSubService {
+		service.SendClientReq(req)
+	}
+	return true
 }
 
 /////////////////

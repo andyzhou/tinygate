@@ -14,6 +14,7 @@ import (
  	PickNode(kind string) string
  	GetServiceByTag(kind, tag string) IService
  	GetService(address string) IService
+ 	GetAllService() map[string]IService
  	GetKind(address string) string
  	NodeDown(address string) bool
  	NodeUp(address string, jsonObj *json.NodeJson, stream *pb.GateService_BindStreamServer) bool

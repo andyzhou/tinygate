@@ -73,7 +73,7 @@ func sendDataToGateClient(s *gate.Service) {
 			{
 				in.MessageId = 20
 				in.Data = []byte("server side message..")
-				s.SendClientReqByKind(subServiceKind, &in)
+				s.SendClientReqToAll(&in)
 			}
 		}
 	}

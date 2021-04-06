@@ -49,7 +49,6 @@ func (f *Node) Quit() {
 }
 
 //pick one active node
-//return node tag
 func (f *Node) PickNode(
 					kind string,
 				) string {
@@ -105,6 +104,11 @@ func (f *Node) GetService(
 		return nil
 	}
 	return service
+}
+
+//get all service
+func (f *Node) GetAllService() map[string]iface.IService {
+	return f.serviceMap
 }
 
 //get kind by remote address
