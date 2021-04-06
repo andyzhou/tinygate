@@ -66,6 +66,19 @@ func (r *Service) SetCBForResponseCast(cb func(connIds []uint32, messageId uint3
 	return r.rpc.SetCBForResponseCast(cb)
 }
 
+//pick one node tag by kind
+func (r *Service) PickNodeByKind(kind string) string {
+	if kind == "" {
+		return ""
+	}
+	//get node face
+	nodeFace := face.RunInterFace.GetNodeFace()
+	if nodeFace == nil {
+		return ""
+	}
+	return nodeFace.PickNode(kind)
+}
+
 ////////////////////////////
 //multi kind send data
 ////////////////////////////
