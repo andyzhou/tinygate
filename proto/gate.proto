@@ -1,0 +1,26 @@
+syntax="proto3";
+package gate;
+
+//define node status
+enum NodeStatus {
+    NODE_DOWN = 0;
+    NODE_UP = 1;
+    NODE_MAINTAIN = 2;
+}
+
+//byte message data
+message ByteMessage {
+    string service = 1; //service kind
+    uint32 messageId = 2; //message id
+    uint32 connId = 3; //tcp connect id
+    int64 playerId = 4; //from or to player id
+    bytes data = 5; //json byte data
+    repeated uint32 castConnIds = 6 [packed=true];//connect id slice for cast
+}
+
+//define service
+service GateService {
+    //stream mode
+    //cast or receive data between gate and target service
+    rpc BindStream(stream ByteMessage) returns(stream ByteMessage);
+}
