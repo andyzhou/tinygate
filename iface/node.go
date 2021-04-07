@@ -20,5 +20,5 @@ import (
  	NodeUp(address string, jsonObj *json.NodeJson, stream *pb.GateService_BindStreamServer) bool
 
  	//set cb for sub service node down
- 	SetCBForNodeDown(cb func(service, remoteAddr string) bool) bool
+ 	SetCBForNodeDown(cb func(serviceKind, remoteAddr string) bool) bool
  }

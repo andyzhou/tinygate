@@ -54,6 +54,15 @@ func (r *Service) Start() {
 	r.createService()
 }
 
+//set cb for sub service node down
+func (r *Service) SetCBForSubServiceNodeDown(cb func(serviceKind, remoteAddr string) bool) bool {
+	nodeFace := face.RunInterFace.GetNodeFace()
+	if nodeFace == nil {
+		return false
+	}
+	return nodeFace.SetCBForNodeDown(cb)
+}
+
 //set cb for bind or unbind node
 //if sub service send `MessageIdOfBindOrUnbind`, need call the cb
 func (r *Service) SetCBForBindUnBindNode(cb func(obj *json.BindJson) bool) bool {
@@ -61,7 +70,7 @@ func (r *Service) SetCBForBindUnBindNode(cb func(obj *json.BindJson) bool) bool 
 }
 
 //set cb for sub service response cast
-//if have response from sub service, need call the cb
+//if process the response from sub service, need call the cb
 func (r *Service) SetCBForResponseCast(cb func(connIds []uint32, messageId uint32, data []byte) bool) bool {
 	return r.rpc.SetCBForResponseCast(cb)
 }
@@ -79,9 +88,9 @@ func (r *Service) PickNodeByKind(kind string) string {
 	return nodeFace.PickNode(kind)
 }
 
-////////////////////////////
-//multi kind send data
-////////////////////////////
+//////////////////////////////////////
+//multi kind send data to sub service
+//////////////////////////////////////
 
 //send data to assigned address of gate client
 func (r *Service) SendClientReqByAddress(address string, req *gate.ByteMessage) bool {

@@ -18,7 +18,7 @@ import (
 
  //face info
  type Node struct {
- 	cbForNodeDown func(service, remoteAddr string) bool
+ 	cbForNodeDown func(serviceKind, remoteAddr string) bool
  	serviceMap map[string]iface.IService `remoteAddr -> IService`
  	kindMap map[string]*KindNodes `active node map, kind -> KindNodes`
  	sync.RWMutex
@@ -216,7 +216,7 @@ func (f *Node) NodeUp(
 
 
 //set cb for sub service node down
-func (f *Node) SetCBForNodeDown(cb func(service, remoteAddr string) bool) bool {
+func (f *Node) SetCBForNodeDown(cb func(serviceKind, remoteAddr string) bool) bool {
 	if cb == nil {
 		return false
 	}
