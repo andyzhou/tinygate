@@ -1,5 +1,6 @@
 # gate
- - tcp/rpc gate bridge interface
+ - rpc gate bridge interface
+ - used for tcp4/6, websocket, http, etc.
  - use rpc stream mode for performance
  - support group sub service by kind and tag
  
