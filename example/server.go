@@ -9,18 +9,26 @@ import (
 )
 
 /*
- * gate server demo
+ * gate server demo for sub service.
  */
 
 const (
+	//rpc service port
 	rpcPort = 7100
 	subServiceKind = "game"
 )
 
-func cbForResponseCast(connIds []uint32, msgId uint32, data []byte) bool {
+//cb stream request from gate server
+func cbForStreamReq(connIds []uint32, msgId uint32, data []byte) bool {
 	fmt.Println("cbForResponseCast, connIds:", connIds,
 				", msgId:", msgId, ", data:", string(data))
 	return true
+}
+
+//cb response for the request from gate client side
+//this for the sync request
+func cbForGenResp(in *pb.GateReq) *pb.GateResp {
+	return nil
 }
 
 func main() {
@@ -38,7 +46,11 @@ func main() {
 	s := gate.NewService(rpcPort)
 	
 	//set cb
-	s.SetCBForResponseCast(cbForResponseCast)
+	//cb for stream data request
+	s.SetCBForStreamReq(cbForStreamReq)
+
+	//cb for general request
+	s.SetCBForGenReq(cbForGenResp)
 
 	//wg add
 	wg.Add(1)

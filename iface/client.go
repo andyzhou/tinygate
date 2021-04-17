@@ -12,6 +12,9 @@ import (
 type IClient interface {
 	Quit()
 
+	//send gen request
+	SendGenReq(in *pb.GateReq) *pb.GateResp
+
 	//cast data
 	CastDataToOneKind(kind string, in *pb.ByteMessage) bool
 	CastDataByTag(tag string, in *pb.ByteMessage) bool
@@ -20,10 +23,10 @@ type IClient interface {
 
 	//base opt
 	BindNodeTags(fromAddr string, bindJson *json.BindJson) bool
-	AddGateServer(tag, host string, port int) bool
+	AddGateServer(kind, host string, port int, tags ...string) bool
 	SetLog(dir, tag string) bool
 
 	//set cb
-	SetCBForStream(cb func(from string, in *pb.ByteMessage) bool) bool
+	SetCBForStreamReceived(cb func(from string, in *pb.ByteMessage) bool) bool
 	SetCBForGateDown(cb func(kind, addr string) bool) bool
 }

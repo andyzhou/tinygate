@@ -15,6 +15,7 @@ import (
  * rpc request service implement
  * - stream service for server side
  * - stream data from rpc client side
+ * - general request from rpc client side
  */
 
  //response from service
@@ -27,7 +28,8 @@ import (
  //service info
  type Service struct {
  	cbForBindUnBindNode func(obj *json.BindJson) bool //cb for bind or unbind node
- 	cbForCastResponse func(connIds []uint32, messageId uint32, data []byte) bool //cb for cast response
+ 	cbForStreamReq func(connIds []uint32, messageId uint32, data []byte) bool //cb for stream request
+ 	cbForGenReq func(req *pb.GateReq) *pb.GateResp //cb for gen request
 	lazyCastChan chan Response
 	closeChan chan bool
  	Base
@@ -57,13 +59,23 @@ func (r *Service) SetCBForBindUnBindNode(cb func(obj *json.BindJson) bool) bool 
 	return true
 }
 
-//set cb for sub service response cast
-//if have response from sub service, need call the cb
-func (r *Service) SetCBForResponseCast(cb func(connIds []uint32, messageId uint32, data []byte) bool) bool {
+//set cb for general request
+//the request from gate client side
+func (r *Service) SetCBForGenReq(cb func(req *pb.GateReq) *pb.GateResp) bool {
 	if cb == nil {
 		return false
 	}
-	r.cbForCastResponse = cb
+	r.cbForGenReq = cb
+	return true
+}
+
+//set cb for stream request
+//the request from gate client side
+func (r *Service) SetCBForStreamReq(cb func(connIds []uint32, messageId uint32, data []byte) bool) bool {
+	if cb == nil {
+		return false
+	}
+	r.cbForStreamReq = cb
 	return true
 }
 
@@ -79,20 +91,23 @@ func (r *Service) Quit() {
 	//send to close chan
 	r.closeChan <- true
 }
- 
 
-//simple bs mode
-//implement interface of `SimpleRequest`
-func (r *Service) SimpleRequest(
-						ctx context.Context,
-						req *pb.ByteMessage,
-					) (*pb.ByteMessage, error) {
-	resp := &pb.ByteMessage{}
+//implement interface of `GenReq`
+func (r *Service) GenReq(ctx context.Context, in *pb.GateReq) (*pb.GateResp, error) {
+	if in == nil {
+		return nil, errors.New("invalid parameter")
+	}
+	if r.cbForGenReq == nil {
+		return nil, errors.New("invalid cb for gen request")
+	}
+
+	//call the cb func to process general requests
+	resp := r.cbForGenReq(in)
 	return resp, nil
 }
 
  //implement interface of `BindStream`
- //receive data from rpc client
+ //receive stream data from rpc client
 func (r *Service) BindStream(stream pb.GateService_BindStreamServer) error {
 	var (
 		in *pb.ByteMessage
@@ -124,7 +139,6 @@ func (r *Service) BindStream(stream pb.GateService_BindStreamServer) error {
 		case <- ctx.Done():
 			log.Println("Stream::BindStream, Receive down signal from client")
 			return ctx.Err()
-
 		default:
 			//receive data from client
 			in, err = stream.Recv()
@@ -143,7 +157,6 @@ func (r *Service) BindStream(stream pb.GateService_BindStreamServer) error {
 
 			//do relate opt by message id
 			switch messageId {
-
 			case define.MessageIdOfNodeUp:
 				//node up
 				{
@@ -159,7 +172,6 @@ func (r *Service) BindStream(stream pb.GateService_BindStreamServer) error {
 						)
 					}
 				}
-
 			case define.MessageIdOfBindOrUnbind:
 				//player bind or unbind node request from sub service
 				{
@@ -174,7 +186,6 @@ func (r *Service) BindStream(stream pb.GateService_BindStreamServer) error {
 						}
 					}
 				}
-
 			default:
 				{
 					//process input data from rpc service node
@@ -211,8 +222,8 @@ func (r *Service) processResponse(resp *Response) bool {
 		return false
 	}
 
-	//check the cb for response data
-	if r.cbForCastResponse == nil {
+	//check the cb for stream request data
+	if r.cbForStreamReq == nil {
 		return false
 	}
 
@@ -220,11 +231,11 @@ func (r *Service) processResponse(resp *Response) bool {
 	castConnIds := resp.byteMessage.CastConnIds
 	if castConnIds != nil && len(castConnIds) > 0 {
 		//cast batch
-		r.cbForCastResponse(castConnIds, messageId, data)
+		r.cbForStreamReq(castConnIds, messageId, data)
 	}else{
 		//only one
 		//begin cast data to tcp client
-		r.cbForCastResponse([]uint32{connId}, messageId, data)
+		r.cbForStreamReq([]uint32{connId}, messageId, data)
 	}
 
 	return true

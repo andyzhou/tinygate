@@ -14,8 +14,9 @@ import (
 /*
  * gate service
  *
- * - api for service side
+ * - api for sub service side
  * - base on g-rpc
+ * - receive request from client side
  */
 
 
@@ -69,10 +70,14 @@ func (r *Service) SetCBForBindUnBindNode(cb func(obj *json.BindJson) bool) bool 
 	return r.rpc.SetCBForBindUnBindNode(cb)
 }
 
-//set cb for sub service response cast
-//if process the response from sub service, need call the cb
-func (r *Service) SetCBForResponseCast(cb func(connIds []uint32, messageId uint32, data []byte) bool) bool {
-	return r.rpc.SetCBForResponseCast(cb)
+//set cb of stream request from gate client
+func (r *Service) SetCBForStreamReq(cb func(connIds []uint32, messageId uint32, data []byte) bool) bool {
+	return r.rpc.SetCBForStreamReq(cb)
+}
+
+//set cb of response for general request from gate client
+func (r *Service) SetCBForGenReq(cb func(req *gate.GateReq) *gate.GateResp) bool {
+	return r.rpc.SetCBForGenReq(cb)
 }
 
 //pick one node tag by kind

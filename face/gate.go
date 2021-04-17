@@ -30,9 +30,10 @@ const (
 //gate info
 type Gate struct {
 	kind string
-	tag string
+	tags []string
 	address string `remote server address, host:port`
-	cbForReceive func(from string, in *pb.ByteMessage) bool `call back for received data`
+	cbForGenReq func(in *pb.GateReq) *pb.GateResp `call back for gen request`
+	cbForStreamReceived func(from string, in *pb.ByteMessage) bool `call back for received data`
 	cbForGateDown func(kind, addr string) bool `call back for gate server down`
 	conn *grpc.ClientConn `rpc client connect`
 	client pb.GateServiceClient `service client`
@@ -47,14 +48,14 @@ type Gate struct {
 //construct
 func NewGate(
 			kind,
-			tag,
 			serverHost string,
 			serverPort int,
+			tags ... string,
 		) *Gate {
 	//self init
 	this := &Gate{
 		kind:kind,
-		tag:tag,
+		tags:tags,
 		address:fmt.Sprintf("%s:%d", serverHost, serverPort),
 		ctx:context.Background(),
 		reqChan:make(chan pb.ByteMessage, gateReqChanSize),
@@ -131,8 +132,8 @@ func (c *Gate) GetKind() string {
 }
 
 //get tag
-func (c *Gate) GetTag() string {
-	return c.tag
+func (c *Gate) GetTags() []string {
+	return c.tags
 }
 
 //get connect state
@@ -140,14 +141,26 @@ func (c *Gate) GetConnStat()string {
 	return c.conn.GetState().String()
 }
 
-//set cb for receive data fro server with stream mode
-func (c *Gate) SetCBForStreamReceive(
+//send general request
+func (c *Gate) SendGenReq(in *pb.GateReq) *pb.GateResp {
+	if in == nil {
+		return nil
+	}
+	resp, err := c.client.GenReq(context.Background(), in)
+	if err != nil {
+		return nil
+	}
+	return resp
+}
+
+//set cb for receive data for server with stream mode
+func (c *Gate) SetCBForStreamReceived(
 					cb func(from string, in *pb.ByteMessage) bool,
 				) bool {
-	if cb == nil || c.cbForReceive != nil {
+	if cb == nil || c.cbForStreamReceived != nil {
 		return false
 	}
-	c.cbForReceive = cb
+	c.cbForStreamReceived = cb
 	return true
 }
 
@@ -193,7 +206,7 @@ func (c *Gate) receiveGateStream() {
 	)
 
 	//basic check
-	if c.stream == nil || c.cbForReceive == nil {
+	if c.stream == nil || c.cbForStreamReceived == nil {
 		return
 	}
 
@@ -215,8 +228,8 @@ func (c *Gate) receiveGateStream() {
 		}
 
 		//call cb for cast gate data to current service node
-		if c.cbForReceive != nil {
-			c.cbForReceive(c.address, in)
+		if c.cbForStreamReceived != nil {
+			c.cbForStreamReceived(c.address, in)
 		}
 	}
 
@@ -231,7 +244,6 @@ func (c *Gate) notifyServer() bool {
 	//init node json
 	nodeJson := json.NewNodeJson()
 	nodeJson.Kind = c.kind
-	nodeJson.Tag = c.tag
 
 	//init byte message
 	byteMessage := pb.ByteMessage{

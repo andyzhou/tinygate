@@ -14,10 +14,10 @@ import (
 /*
  * gate client face
  *
- * - used by sub service
+ * - used by tcp service
  * - api for gate face
  * - support multi gate server
- * - communicate byte data with gate server pass stream mode
+ * - communicate with gate server pass general and stream mode
  */
 
 //inter macro define
@@ -27,9 +27,8 @@ const (
 
 //client info
 type Client struct {
-	kind string
-	gateMap map[string]iface.IGate                                `running gate map, serverAddress -> Gate`
-	cbForReceive func(from string, in *pb.ByteMessage) bool `call back for received data`
+	gateMap map[string]iface.IGate `running gate map, serverAddress -> Gate`
+	cbForStreamReceived func(from string, in *pb.ByteMessage) bool `call back for received data`
 	cbForGateDown func(kind string, addr string) bool       `call back for gate server down`
 	closeChan chan bool
 	sync.Mutex `internal data locker`
@@ -37,10 +36,9 @@ type Client struct {
 
 //construct
 //STEP-1
-func NewClient(kind string) *Client {
+func NewClient() *Client {
 	//self init
 	this := &Client{
-		kind:kind,
 		gateMap:make(map[string]iface.IGate),
 		closeChan:make(chan bool, 1),
 	}
@@ -76,21 +74,20 @@ func (c *Client) Quit() {
 	c.closeChan <- true
 }
 
-
 //set call back for received stream data
-//STEP-2
-func (c *Client) SetCBForStream(
+//STEP-3
+func (c *Client) SetCBForStreamReceived(
 			cb func(from string, in *pb.ByteMessage) bool,
 		) bool {
-	if c.cbForReceive != nil {
+	if c.cbForStreamReceived != nil {
 		return false
 	}
-	c.cbForReceive = cb
+	c.cbForStreamReceived = cb
 	return true
 }
 
 //set call back for gate server down
-//STEP-3
+//STEP-4
 func (c *Client) SetCBForGateDown(
 				cb func(kind, addr string) bool,
 			) bool {
@@ -104,9 +101,9 @@ func (c *Client) SetCBForGateDown(
 
 //add gate server
 //STEP-4
-func (c *Client) AddGateServer(tag, host string, port int) bool {
+func (c *Client) AddGateServer(kind, host string, port int, tags ... string) bool {
 	//basic check
-	if tag == "" || host == "" || port <= 0 {
+	if kind == "" || host == "" || port <= 0 {
 		return false
 	}
 
@@ -114,16 +111,16 @@ func (c *Client) AddGateServer(tag, host string, port int) bool {
 	address := fmt.Sprintf("%s:%d", host, port)
 
 	//check gate has exists or not
-	_, ok := c.gateMap[address]
-	if ok {
+	old := c.getGateByAddr(address)
+	if old != nil {
 		return true
 	}
 
 	//init gate
-	gate := NewGate(c.kind, tag, host, port)
+	gate := NewGate(kind, host, port, tags...)
 
 	//set callback function
-	gate.SetCBForStreamReceive(c.cbForReceive)
+	gate.SetCBForStreamReceived(c.cbForStreamReceived)
 	gate.SetCBForGateDown(c.cbForGateDown)
 
 	//sync into map
@@ -144,7 +141,6 @@ func (c *Client) SetLog(dir, tag string) bool {
 	//c.logService = tc.NewLogService(dir, tag)
 	return true
 }
-
 
 //bind batch node and tag for single client
 func (c *Client) BindNodeTags(
@@ -171,6 +167,29 @@ func (c *Client) BindNodeTags(
 	bRet := c.CastData(fromAddr, in)
 
 	return bRet
+}
+
+//send general request
+func (c *Client) SendGenReq(in *pb.GateReq) *pb.GateResp {
+	var (
+		gate iface.IGate
+	)
+
+	//basic check
+	if in == nil {
+		return nil
+	}
+	if in.Address != "" {
+		//get gate by address
+		gate = c.getGateByAddr(in.Address)
+	}else{
+		//pick gate by service
+	}
+	if gate == nil {
+		return nil
+	}
+	//send general request
+	return gate.SendGenReq(in)
 }
 
 //cast data to one gate
@@ -291,17 +310,31 @@ func (c *Client) getGateByAddr(address string) iface.IGate {
 	return v
 }
 
-//get gate by tag
-func (c *Client) getGateByTag(tag string) iface.IGate {
-	if tag == "" {
+//pick rand gate by kind
+func (c *Client) getGateByKind(kind string) iface.IGate {
+	var (
+		address string
+	)
+
+	//basic check
+	if kind == "" || c.gateMap == nil {
 		return nil
 	}
-	for _, gate := range c.gateMap {
-		if gate.GetTag() == tag {
-			return gate
+
+	//pick address by kind
+	for addr, v := range c.gateMap {
+		if v.GetKind() == kind {
+			address = addr
+			break
 		}
 	}
-	return nil
+
+	if address == "" {
+		return nil
+	}
+
+	//get gate by address
+	return c.getGateByAddr(address)
 }
 
 //check gate connect status process

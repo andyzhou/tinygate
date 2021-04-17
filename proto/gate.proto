@@ -18,9 +18,30 @@ message ByteMessage {
     repeated uint32 castConnIds = 6 [packed=true];//connect id slice for cast
 }
 
+//general request
+message GateReq {
+    string service = 1; //service kind
+    uint32 messageId = 2; //message id
+    string address = 3; //assigned address
+    bytes data = 4; //json byte data
+    bool isAsync = 5; //async mode switcher
+}
+
+//general response
+message GateResp {
+    string service = 1; //service kind
+    uint32 messageId = 2; //message id
+    int32  errorCode = 3;
+    string errorMessage = 4;
+    bytes data = 5; //json byte data
+}
+
 //define service
 service GateService {
     //stream mode
     //cast or receive data between gate and target service
     rpc BindStream(stream ByteMessage) returns(stream ByteMessage);
+
+    //general sync mode
+    rpc GenReq(GateReq) returns(GateResp);
 }

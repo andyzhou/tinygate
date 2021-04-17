@@ -10,22 +10,25 @@ import (
 )
 
 /*
- * gate client demo
+ * gate client demo, for tcp server?
  */
 
 const (
+	//gate setting
 	gateServer = "localhost"
 	gatePort = 7100
 
+	//others
 	clientKind = "game"
-	clientTag = "tag"
 )
 
+//cb for received stream data from gate server
 func cbForReceivedStreamData(from string, in *pb.ByteMessage) bool {
 	fmt.Println("cbForReceivedStreamData, from:", from, ", in:", string(in.Data))
 	return true
 }
 
+//cb for gate server down
 func cbForGateDown(kind, addr string) bool {
 	fmt.Println("cbForGateDown, kind:", kind, ", addr:", addr)
 	return true
@@ -44,7 +47,7 @@ func main()  {
 	}(wg)
 
 	//init client
-	c := gate.NewClient(clientKind)
+	c := gate.NewClient()
 
 	//set relate cb
 	c.SetCBForGateDown(cbForGateDown)
@@ -54,7 +57,7 @@ func main()  {
 	c.SetLog("log", "client")
 
 	//get gate server
-	bRet := c.AddGateServer(clientTag, gateServer, gatePort)
+	bRet := c.AddGateServer(clientKind, gateServer, gatePort)
 	if !bRet {
 		fmt.Println("add gate server failed")
 		return
@@ -64,14 +67,50 @@ func main()  {
 	wg.Add(1)
 	fmt.Println("start client..")
 
-	go sendDataToGate(c)
+	go sendGenReqToGate(c)
+	go sendStreamDataToGate(c)
 
 	wg.Wait()
 	fmt.Println("stop client..")
 }
 
-//send data to gate
-func sendDataToGate(c *gate.Client) {
+//send general request to gate
+func sendGenReqToGate(c *gate.Client)  {
+	var (
+		in = pb.GateReq{}
+		ticker = time.NewTicker(time.Second * 2)
+		messageData string
+	)
+
+	//defer
+	defer func() {
+		ticker.Stop()
+	}()
+
+	//loop
+	messageIdStart := uint32(30)
+	messageIdEnd := 40
+	for {
+		select {
+		case <- ticker.C:
+			{
+				//set pb data
+				in.MessageId = uint32(rand.Intn(messageIdEnd))
+				if in.MessageId < messageIdStart {
+					in.MessageId = messageIdStart
+				}
+				messageData = fmt.Sprintf("%d-%d", in.MessageId, time.Now().Unix())
+				in.Data = []byte(messageData)
+
+				//send general request to gate server
+				c.SendGenReq(&in)
+			}
+		}
+	}
+}
+
+//send stream data to gate
+func sendStreamDataToGate(c *gate.Client) {
 	var (
 		in = pb.ByteMessage{}
 		ticker = time.NewTicker(time.Second * 2)

@@ -8,18 +8,19 @@ import pb "github.com/andyzhou/gate/proto"
 
 type IGate interface {
 	Quit()
+	SendGenReq(in *pb.GateReq) *pb.GateResp
 	CastData(in *pb.ByteMessage) bool
 	Connect(isReConn bool) bool
 
 	//get
-	GetKind() string
-	GetTag() string
+	GetKind() string //service kind
+	GetTags() []string //unique tags
 	GetConnStat()string
 
 	//check
 	ConnIsNil() bool
 
 	//set cb
-	SetCBForStreamReceive(cb func(from string, in *pb.ByteMessage) bool) bool
+	SetCBForStreamReceived(cb func(from string, in *pb.ByteMessage) bool) bool
 	SetCBForGateDown(cb func(kind, address string) bool) bool
 }

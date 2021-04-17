@@ -10,7 +10,10 @@ import (
 /*
  * gate client
  *
- * - api for client/sub service side
+ * - used at tcp server side
+ * - communicate with gate server
+ * - send request to gate server/sub service
+ * - receive response from gate server/sub service
  */
 
 //client info
@@ -20,30 +23,25 @@ type Client struct {
 
 //construct
 //STEP-1
-func NewClient(kind string) *Client {
+func NewClient() *Client {
 	//self init
 	this := &Client{
-		client:face.NewClient(kind),
+		client:face.NewClient(),
 	}
 	return this
 }
-
-
-///////
-//api
-//////
 
 //quit
 func (c *Client) Quit() {
 	c.client.Quit()
 }
 
-//set call back for received stream data
+//set call back for received stream data from gate server
 //STEP-2
-func (c *Client) SetCBForStream(
+func (c *Client) SetCBForStreamReceived(
 			cb func(from string, in *pb.ByteMessage) bool,
 		) bool {
-	return c.client.SetCBForStream(cb)
+	return c.client.SetCBForStreamReceived(cb)
 }
 
 //set call back for gate server down
@@ -55,9 +53,10 @@ func (c *Client) SetCBForGateDown(
 }
 
 //add gate server
+//support multi gates
 //STEP-4
-func (c *Client) AddGateServer(tag, host string, port int) bool {
-	return c.client.AddGateServer(tag, host, port)
+func (c *Client) AddGateServer(kind, host string, port int) bool {
+	return c.client.AddGateServer(kind, host, port)
 }
 
 //set log option
@@ -74,7 +73,12 @@ func (c *Client) BindNodeTags(
 	return c.client.BindNodeTags(fromAddr, bindJson)
 }
 
-//cast data to one gate
+//send gen request
+func (c *Client) SendGenReq(in *pb.GateReq) *pb.GateResp {
+	return c.client.SendGenReq(in)
+}
+
+//cast stream data to one gate
 func (c *Client) CastData(
 			address string,
 			in *pb.ByteMessage,
