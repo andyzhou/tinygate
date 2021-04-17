@@ -164,7 +164,6 @@ func (c *Gate) SetCBForStreamReceived(
 	return true
 }
 
-
 //set cb for gate server down
 func (c *Gate) SetCBForGateDown(
 				cb func(string, string) bool,
@@ -323,6 +322,7 @@ func (c *Gate) connect(isReConn bool) bool {
 	defer c.Unlock()
 	c.conn = conn
 	c.stream = stream
+	c.client = client
 
 	//notify gate server
 	c.notifyServer()

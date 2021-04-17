@@ -183,7 +183,8 @@ func (c *Client) SendGenReq(in *pb.GateReq) *pb.GateResp {
 		//get gate by address
 		gate = c.getGateByAddr(in.Address)
 	}else{
-		//pick gate by service
+		//pick gate by service kind
+		gate = c.getGateByKind(in.Service)
 	}
 	if gate == nil {
 		return nil

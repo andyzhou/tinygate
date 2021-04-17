@@ -103,6 +103,9 @@ func (r *Service) GenReq(ctx context.Context, in *pb.GateReq) (*pb.GateResp, err
 
 	//call the cb func to process general requests
 	resp := r.cbForGenReq(in)
+	if resp == nil {
+		return nil, errors.New("invalid response")
+	}
 	return resp, nil
 }
 

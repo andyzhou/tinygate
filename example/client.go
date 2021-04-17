@@ -10,7 +10,7 @@ import (
 )
 
 /*
- * gate client demo, for tcp server?
+ * gate client demo, for tcp server side.
  */
 
 const (
@@ -51,7 +51,7 @@ func main()  {
 
 	//set relate cb
 	c.SetCBForGateDown(cbForGateDown)
-	c.SetCBForStream(cbForReceivedStreamData)
+	c.SetCBForStreamReceived(cbForReceivedStreamData)
 
 	//set log
 	c.SetLog("log", "client")
@@ -68,7 +68,7 @@ func main()  {
 	fmt.Println("start client..")
 
 	go sendGenReqToGate(c)
-	go sendStreamDataToGate(c)
+	//go sendStreamDataToGate(c)
 
 	wg.Wait()
 	fmt.Println("stop client..")
@@ -95,6 +95,7 @@ func sendGenReqToGate(c *gate.Client)  {
 		case <- ticker.C:
 			{
 				//set pb data
+				in.Service = clientKind
 				in.MessageId = uint32(rand.Intn(messageIdEnd))
 				if in.MessageId < messageIdStart {
 					in.MessageId = messageIdStart
@@ -103,7 +104,10 @@ func sendGenReqToGate(c *gate.Client)  {
 				in.Data = []byte(messageData)
 
 				//send general request to gate server
-				c.SendGenReq(&in)
+				resp := c.SendGenReq(&in)
+				if resp != nil {
+					fmt.Println("client resp, resp:", resp)
+				}
 			}
 		}
 	}

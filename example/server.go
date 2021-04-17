@@ -9,13 +9,12 @@ import (
 )
 
 /*
- * gate server demo for sub service.
+ * gate server demo for sub service side.
  */
 
 const (
 	//rpc service port
 	rpcPort = 7100
-	subServiceKind = "game"
 )
 
 //cb stream request from gate server
@@ -25,10 +24,17 @@ func cbForStreamReq(connIds []uint32, msgId uint32, data []byte) bool {
 	return true
 }
 
-//cb response for the request from gate client side
+//cb for the request from gate client side
 //this for the sync request
-func cbForGenResp(in *pb.GateReq) *pb.GateResp {
-	return nil
+func cbForGenReq(in *pb.GateReq) *pb.GateResp {
+	fmt.Println("cbForGenReq, in messageId:", in.MessageId)
+
+	//init resp
+	resp := &pb.GateResp{
+		ErrorCode: 1,
+		ErrorMessage: "test",
+	}
+	return resp
 }
 
 func main() {
@@ -50,7 +56,7 @@ func main() {
 	s.SetCBForStreamReq(cbForStreamReq)
 
 	//cb for general request
-	s.SetCBForGenReq(cbForGenResp)
+	s.SetCBForGenReq(cbForGenReq)
 
 	//wg add
 	wg.Add(1)
