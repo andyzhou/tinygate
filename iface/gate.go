@@ -23,4 +23,5 @@ type IGate interface {
 	//set cb
 	SetCBForStreamReceived(cb func(from string, in *pb.ByteMessage) bool) bool
 	SetCBForGateServerDown(cb func(kind, address string) bool) bool
+	SetCBForGateServerUp(cb func(kind, address string) bool) bool
 }

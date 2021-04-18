@@ -25,9 +25,10 @@ const (
 
 //client info
 type Client struct {
-	gateMap map[string]iface.IGate `running gate server map, serverAddress -> Gate`
-	cbForStreamReceived func(from string, in *pb.ByteMessage) bool `call back for received data`
-	cbForGateServerDown func(kind string, addr string) bool `call back for gate server down`
+	gateMap map[string]iface.IGate //running gate server map, serverAddress -> Gate
+	cbForStreamReceived func(from string, in *pb.ByteMessage) bool //call back for received data
+	cbForGateServerDown func(kind string, addr string) bool //call back for gate server down
+	cbForGateServerUp func(kind string, addr string) bool //call back for gate server up
 	closeChan chan bool
 	sync.Mutex `internal data locker`
 }
@@ -92,6 +93,15 @@ func (c *Client) SetCBForGateServerDown(
 	return true
 }
 
+//set call back for gate server up
+func (c *Client) SetCBForGateServerUp(cb func(kind, addr string) bool) bool {
+	if c.cbForGateServerUp != nil {
+		return false
+	}
+	c.cbForGateServerUp = cb
+	return true
+}
+
 //set log option
 //STEP-5, optional
 func (c *Client) SetLog(dir, tag string) bool {
@@ -146,6 +156,7 @@ func (c *Client) AddGateServer(
 	//set callback function
 	gate.SetCBForStreamReceived(c.cbForStreamReceived)
 	gate.SetCBForGateServerDown(c.cbForGateServerDown)
+	gate.SetCBForGateServerUp(c.cbForGateServerUp)
 
 	//sync into map
 	c.Lock()

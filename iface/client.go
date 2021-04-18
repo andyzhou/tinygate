@@ -27,4 +27,5 @@ type IClient interface {
 	//set cb func
 	SetCBForStreamReceived(cb func(from string, in *pb.ByteMessage) bool) bool
 	SetCBForGateServerDown(cb func(kind, addr string) bool) bool
+	SetCBForGateServerUp(cb func(kind, addr string) bool) bool
 }

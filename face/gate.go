@@ -43,6 +43,7 @@ type Gate struct {
 	//cb func
 	cbForStreamReceived func(from string, in *pb.ByteMessage) bool //call back for received data
 	cbForGateServerDown func(kind, addr string) bool //call back for gate server down
+	cbForGateServerUp func(kind, addr string) bool //call back for gate server up
 }
 
 //construct
@@ -173,6 +174,17 @@ func (c *Gate) SetCBForGateServerDown(
 		return false
 	}
 	c.cbForGateServerDown = cb
+	return true
+}
+
+//set cb for gate server up
+func (c *Gate) SetCBForGateServerUp(
+				cb func(string, string) bool,
+			) bool {
+	if cb == nil || c.cbForGateServerUp != nil {
+		return false
+	}
+	c.cbForGateServerUp = cb
 	return true
 }
 
@@ -316,6 +328,11 @@ func (c *Gate) connect(isReConn bool) bool {
 		}
 		tryTimes++
 		time.Sleep(time.Second)
+	}
+
+	//connect gate server succeed
+	if c.cbForGateServerUp != nil {
+		c.cbForGateServerUp(c.kind, c.address)
 	}
 
 	//sync gate property

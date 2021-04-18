@@ -51,6 +51,13 @@ func (c *Client) SetCBForGateServerDown(
 	return c.client.SetCBForGateServerDown(cb)
 }
 
+//set call back for gate server up
+func (c *Client) SetCBForGateServerUp(
+			cb func(kind, addr string) bool,
+		) bool {
+	return c.client.SetCBForGateServerUp(cb)
+}
+
 //set log option
 func (c *Client) SetLog(dir, tag string) bool {
 	return c.client.SetLog(dir, tag)
