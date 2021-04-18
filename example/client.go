@@ -34,6 +34,12 @@ func cbForGateServerDown(kind, addr string) bool {
 	return true
 }
 
+//cb for gate server up
+func cbForGateServerUp(kind, addr string) bool {
+	fmt.Println("cbForGateServerUp, kind:", kind, ", addr:", addr)
+	return true
+}
+
 func main()  {
 	//init wg
 	wg := new(sync.WaitGroup)
@@ -51,6 +57,7 @@ func main()  {
 
 	//set relate cb
 	c.SetCBForGateServerDown(cbForGateServerDown)
+	c.SetCBForGateServerUp(cbForGateServerUp)
 	c.SetCBForStreamReceived(cbForReceivedStreamData)
 
 	//set log
