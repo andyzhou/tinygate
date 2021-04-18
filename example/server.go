@@ -19,7 +19,7 @@ const (
 
 //cb stream request from gate server
 func cbForStreamReq(remoteAddr string, req *pb.ByteMessage) bool {
-	fmt.Println("cbForResponseCast, remoteAddr:", remoteAddr)
+	fmt.Println("cbForStreamReq, remoteAddr:", remoteAddr)
 	return true
 }
 
@@ -90,7 +90,7 @@ func sendDataToGateClient(s *gate.Service) {
 			{
 				in.MessageId = 20
 				in.Data = []byte("server side message..")
-				s.SendClientReqToAll(&in)
+				s.SendStreamDataRespToAll(&in)
 			}
 		}
 	}

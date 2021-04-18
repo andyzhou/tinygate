@@ -37,6 +37,8 @@ func NewService(port int) *Service {
 		rpc:rpc.NewService(),
 		service:nil,
 	}
+	//set node face for rpc service
+	this.rpc.SetNodeFace(this.node)
 	return this
 }
 
@@ -101,8 +103,8 @@ func (r *Service) SendStreamDataResp(address string, resp *gate.ByteMessage) boo
 	return bRet
 }
 
-//send data to all gate clients
-func (r *Service) SendClientReqToAll(resp *gate.ByteMessage) bool {
+//send stream data to all gate clients
+func (r *Service) SendStreamDataRespToAll(resp *gate.ByteMessage) bool {
 	//basic check
 	if resp == nil || r.node == nil {
 		return false

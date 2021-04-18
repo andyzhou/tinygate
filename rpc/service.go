@@ -168,6 +168,9 @@ func (r *Service) BindStream(stream pb.GateService_BindStreamServer) error {
 	//add remote stream into map
 	r.clientStreamMap[remoteAddr] = stream
 
+	//client node up
+	r.node.ClientNodeUp(remoteAddr, &stream)
+
 	//try receive stream data from node
 	for {
 		select {

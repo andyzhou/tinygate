@@ -2,7 +2,6 @@ package face
 
 import (
 	"github.com/andyzhou/gate/iface"
-	"github.com/andyzhou/gate/json"
 	pb "github.com/andyzhou/gate/proto"
 	"sync"
 )
@@ -90,7 +89,6 @@ func (f *Node) ClientNodeDown(
 //means remote client node up
 func (f *Node) ClientNodeUp(
 					remoteAddress string,
-					jsonObj *json.NodeJson,
 					stream *pb.GateService_BindStreamServer,
 				) bool {
 	//basic check

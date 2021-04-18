@@ -68,7 +68,7 @@ func main()  {
 	fmt.Println("start client..")
 
 	go sendGenReqToGate(c)
-	//go sendStreamDataToGate(c)
+	go sendStreamDataToGate(c)
 
 	wg.Wait()
 	fmt.Println("stop client..")
