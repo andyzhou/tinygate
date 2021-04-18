@@ -2,9 +2,7 @@ package face
 
 import (
 	"fmt"
-	"github.com/andyzhou/gate/define"
 	"github.com/andyzhou/gate/iface"
-	"github.com/andyzhou/gate/json"
 	pb "github.com/andyzhou/gate/proto"
 	"log"
 	"sync"
@@ -16,7 +14,7 @@ import (
  *
  * - used by tcp service
  * - api for gate face
- * - support multi gate server
+ * - support multi gate servers
  * - communicate with gate server pass general and stream mode
  */
 
@@ -27,9 +25,9 @@ const (
 
 //client info
 type Client struct {
-	gateMap map[string]iface.IGate `running gate map, serverAddress -> Gate`
+	gateMap map[string]iface.IGate `running gate server map, serverAddress -> Gate`
 	cbForStreamReceived func(from string, in *pb.ByteMessage) bool `call back for received data`
-	cbForGateDown func(kind string, addr string) bool       `call back for gate server down`
+	cbForGateServerDown func(kind string, addr string) bool `call back for gate server down`
 	closeChan chan bool
 	sync.Mutex `internal data locker`
 }
@@ -48,10 +46,6 @@ func NewClient() *Client {
 
 	return this
 }
-
-///////
-//api
-//////
 
 //quit
 func (c *Client) Quit() {
@@ -74,7 +68,7 @@ func (c *Client) Quit() {
 	c.closeChan <- true
 }
 
-//set call back for received stream data
+//set call back for received stream data from server side
 //STEP-3
 func (c *Client) SetCBForStreamReceived(
 			cb func(from string, in *pb.ByteMessage) bool,
@@ -88,46 +82,13 @@ func (c *Client) SetCBForStreamReceived(
 
 //set call back for gate server down
 //STEP-4
-func (c *Client) SetCBForGateDown(
-				cb func(kind, addr string) bool,
+func (c *Client) SetCBForGateServerDown(
+				cb func(serviceKind, addr string) bool,
 			) bool {
-	if c.cbForGateDown != nil {
+	if c.cbForGateServerDown != nil {
 		return false
 	}
-	c.cbForGateDown = cb
-	return true
-}
-
-
-//add gate server
-//STEP-4
-func (c *Client) AddGateServer(kind, host string, port int, tags ... string) bool {
-	//basic check
-	if kind == "" || host == "" || port <= 0 {
-		return false
-	}
-
-	//format address
-	address := fmt.Sprintf("%s:%d", host, port)
-
-	//check gate has exists or not
-	old := c.getGateByAddr(address)
-	if old != nil {
-		return true
-	}
-
-	//init gate
-	gate := NewGate(kind, host, port, tags...)
-
-	//set callback function
-	gate.SetCBForStreamReceived(c.cbForStreamReceived)
-	gate.SetCBForGateDown(c.cbForGateDown)
-
-	//sync into map
-	c.Lock()
-	defer c.Unlock()
-	c.gateMap[address] = gate
-
+	c.cbForGateServerDown = cb
 	return true
 }
 
@@ -142,34 +103,86 @@ func (c *Client) SetLog(dir, tag string) bool {
 	return true
 }
 
-//bind batch node and tag for single client
-func (c *Client) BindNodeTags(
-			fromAddr string,
-			bindJson *json.BindJson,
-		) bool {
+//pick one rand gate server by service kind
+func (c *Client) PickOneGateServer(serviceKind string) iface.IGate {
 	//basic check
-	if fromAddr == "" || bindJson == nil {
+	if serviceKind == "" || c.gateMap == nil {
+		return nil
+	}
+
+	//begin loop gate server map and pick one
+	for _, gs := range c.gateMap {
+		if gs.GetKind() == serviceKind {
+			return gs
+		}
+	}
+	return nil
+}
+
+//add gate server
+//STEP-4
+func (c *Client) AddGateServer(
+					serviceKind, host string,
+					port int,
+					tags ... string,
+				) bool {
+	//basic check
+	if serviceKind == "" || host == "" || port <= 0 {
 		return false
 	}
 
-	//set opt
-	bindJson.Opt = define.NodeOptBind
+	//format address
+	address := fmt.Sprintf("%s:%d", host, port)
 
-	//init byte message
-	in := &pb.ByteMessage{
-		MessageId:define.MessageIdOfBindOrUnbind,
-		ConnId:bindJson.ConnId,
-		PlayerId:bindJson.PlayerId,
-		Data:bindJson.Encode(),
+	//check gate has exists or not
+	old := c.getGateByAddr(address)
+	if old != nil {
+		return true
 	}
 
-	//send to remote gate server
-	bRet := c.CastData(fromAddr, in)
+	//init gate
+	gate := NewGate(serviceKind, host, port, tags...)
 
-	return bRet
+	//set callback function
+	gate.SetCBForStreamReceived(c.cbForStreamReceived)
+	gate.SetCBForGateServerDown(c.cbForGateServerDown)
+
+	//sync into map
+	c.Lock()
+	defer c.Unlock()
+	c.gateMap[address] = gate
+
+	return true
 }
 
-//send general request
+////bind batch node and tag for single client
+//func (c *Client) BindNodeTags(
+//			fromAddr string,
+//			bindJson *json.BindJson,
+//		) bool {
+//	//basic check
+//	if fromAddr == "" || bindJson == nil {
+//		return false
+//	}
+//
+//	//set opt
+//	bindJson.Opt = define.NodeOptBind
+//
+//	//init byte message
+//	in := &pb.ByteMessage{
+//		MessageId:define.MessageIdOfBindOrUnbind,
+//		ConnId:bindJson.ConnId,
+//		PlayerId:bindJson.PlayerId,
+//		Data:bindJson.Encode(),
+//	}
+//
+//	//send to remote gate server
+//	bRet := c.CastData(fromAddr, in)
+//
+//	return bRet
+//}
+
+//send general request to remote gate server
 func (c *Client) SendGenReq(in *pb.GateReq) *pb.GateResp {
 	var (
 		gate iface.IGate
@@ -193,7 +206,7 @@ func (c *Client) SendGenReq(in *pb.GateReq) *pb.GateResp {
 	return gate.SendGenReq(in)
 }
 
-//cast data to one gate
+//cast data to gate server
 func (c *Client) CastData(
 			address string,
 			in *pb.ByteMessage,
@@ -211,24 +224,8 @@ func (c *Client) CastData(
 	return bRet
 }
 
-func (c *Client) CastDataByTag(
-			tag string,
-			in *pb.ByteMessage,
-		) bool {
-	//get remote gate by address
-	gate := c.getGateByAddr(tag)
-	if gate == nil {
-		return false
-	}
-
-	//cast response to tcp client
-	bRet := gate.CastData(in)
-
-	return bRet
-}
-
 //cast data to one kind gates
-func (c *Client) CastDataToOneKind(kind string, in *pb.ByteMessage) bool {
+func (c *Client) CastDataByKind(kind string, in *pb.ByteMessage) bool {
 	if kind == "" || in == nil {
 		return false
 	}

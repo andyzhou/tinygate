@@ -19,7 +19,7 @@ const (
 	gatePort = 7100
 
 	//others
-	clientKind = "game"
+	gateServerKind = "chat"
 )
 
 //cb for received stream data from gate server
@@ -29,8 +29,8 @@ func cbForReceivedStreamData(from string, in *pb.ByteMessage) bool {
 }
 
 //cb for gate server down
-func cbForGateDown(kind, addr string) bool {
-	fmt.Println("cbForGateDown, kind:", kind, ", addr:", addr)
+func cbForGateServerDown(kind, addr string) bool {
+	fmt.Println("cbForGateServerDown, kind:", kind, ", addr:", addr)
 	return true
 }
 
@@ -50,14 +50,14 @@ func main()  {
 	c := gate.NewClient()
 
 	//set relate cb
-	c.SetCBForGateDown(cbForGateDown)
+	c.SetCBForGateServerDown(cbForGateServerDown)
 	c.SetCBForStreamReceived(cbForReceivedStreamData)
 
 	//set log
 	c.SetLog("log", "client")
 
-	//get gate server
-	bRet := c.AddGateServer(clientKind, gateServer, gatePort)
+	//add gate server
+	bRet := c.AddGateServer(gateServerKind, gateServer, gatePort)
 	if !bRet {
 		fmt.Println("add gate server failed")
 		return
@@ -95,7 +95,7 @@ func sendGenReqToGate(c *gate.Client)  {
 		case <- ticker.C:
 			{
 				//set pb data
-				in.Service = clientKind
+				in.Service = gateServerKind
 				in.MessageId = uint32(rand.Intn(messageIdEnd))
 				if in.MessageId < messageIdStart {
 					in.MessageId = messageIdStart

@@ -8,35 +8,33 @@ import (
 
 /*
  * service face, implement of IService
- * - remote sub rpc service node
+ * - used for remote sub rpc service node
  * - dynamic service face
  * - async process in channel
+ * - one client node one service instance
  */
 
  //face info
  type Service struct {
-	 kind string
-	 tag string
-	 remoteAddr string
-	 stream *pb.GateService_BindStreamServer
-	 clientReqChan chan pb.ByteMessage //client request
+	 remoteAddr string //client node remote address
+	 stream *pb.GateService_BindStreamServer //stream server from client node
+	 clientRespChan chan pb.ByteMessage //chan for send client response
 	 closeChan chan bool
  }
  
  //construct
 func NewService(
-				kind, tag, remoteAddr string,
+				remoteAddr string, //remote client address
 				stream *pb.GateService_BindStreamServer,
 			) *Service {
 	//self init
 	this := &Service{
-		kind:kind,
-		tag:tag,
 		remoteAddr:remoteAddr,
 		stream:stream,
-		clientReqChan:make(chan pb.ByteMessage, define.ClientReqChanSize),
+		clientRespChan:make(chan pb.ByteMessage, define.ResponseChanSize),
 		closeChan:make(chan bool, 1),
 	}
+
 	//spawn main process
 	go this.runMainProcess()
 	return this
@@ -48,14 +46,21 @@ func NewService(
 
 //quit
 func (f *Service) Quit() {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Println("Service:Quit panic, err:", err)
+		}
+	}()
+
+	//send to chan
 	f.closeChan <- true
 }
 
-//tcp client request on current service
-//send request to sub gate service(client)
-func (f *Service) SendClientReq(req *pb.ByteMessage) (bRet bool) {
+ //send resp to client node
+ //used for stream mode
+func (f *Service) SendClientResp(resp *pb.ByteMessage) (bRet bool) {
 	//basic check
-	if req == nil || req.MessageId < 0 {
+	if resp == nil || resp.MessageId < 0 {
 		bRet = false
 		return
 	}
@@ -63,36 +68,26 @@ func (f *Service) SendClientReq(req *pb.ByteMessage) (bRet bool) {
 	//try catch panic
 	defer func() {
 		if err := recover(); err != nil {
-			log.Println("Service::ClientReq panic, err:", err)
+			log.Println("Service::SendClientResp panic, err:", err)
 			bRet = false
 			return
 		}
 	}()
 
 	//send to chan
-	f.clientReqChan <- *req
+	f.clientRespChan <- *resp
 	bRet = true
-
 	return
 }
 
-//get
+//get remote client address
 func (f *Service) GetRemoteAddr() string {
 	return f.remoteAddr
-}
-
-func (f *Service) GetKind() string {
-	return f.kind
-}
-
-func (f *Service) GetTag() string {
-	return f.tag
 }
 
 func (f *Service) GetStream() *pb.GateService_BindStreamServer {
 	return f.stream
 }
-
 
 ////////////////
 //private func
@@ -101,14 +96,14 @@ func (f *Service) GetStream() *pb.GateService_BindStreamServer {
 //run main process
 func (f *Service) runMainProcess() {
 	var (
-		clientReq pb.ByteMessage
+		resp pb.ByteMessage //response for client
 		needQuit, isOk bool
 		err error
 	)
 
 	//defer close chan
 	defer func() {
-		close(f.clientReqChan)
+		close(f.clientRespChan)
 		close(f.closeChan)
 	}()
 
@@ -118,10 +113,10 @@ func (f *Service) runMainProcess() {
 			break
 		}
 		select {
-		case clientReq, isOk = <- f.clientReqChan:
+		case resp, isOk = <- f.clientRespChan:
 			if isOk && f.stream != nil {
-				//cast to target sub service pass stream mode
-				err = (*f.stream).Send(&clientReq)
+				//cast to client node pass stream mode
+				err = (*f.stream).Send(&resp)
 				if err != nil {
 					log.Println("Service::runMainProcess send failed, err:", err.Error())
 				}

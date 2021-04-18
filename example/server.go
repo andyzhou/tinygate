@@ -18,9 +18,8 @@ const (
 )
 
 //cb stream request from gate server
-func cbForStreamReq(connIds []uint32, msgId uint32, data []byte) bool {
-	fmt.Println("cbForResponseCast, connIds:", connIds,
-				", msgId:", msgId, ", data:", string(data))
+func cbForStreamReq(remoteAddr string, req *pb.ByteMessage) bool {
+	fmt.Println("cbForResponseCast, remoteAddr:", remoteAddr)
 	return true
 }
 
@@ -52,17 +51,17 @@ func main() {
 	s := gate.NewService(rpcPort)
 	
 	//set cb
-	//cb for stream data request
+	//cb for stream data request process
 	s.SetCBForStreamReq(cbForStreamReq)
 
-	//cb for general request
+	//cb for general request process
 	s.SetCBForGenReq(cbForGenReq)
 
 	//wg add
 	wg.Add(1)
 
 	//start
-	fmt.Println("start service..")
+	fmt.Printf("start service,localhost:%d\n", rpcPort)
 	s.Start()
 
 	//send data to client

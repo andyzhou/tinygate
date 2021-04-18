@@ -10,9 +10,7 @@ import (
 
  type IService interface {
  	Quit()
- 	SendClientReq(req *pb.ByteMessage) bool
+ 	SendClientResp(resp *pb.ByteMessage) bool
  	GetRemoteAddr() string
- 	GetKind() string
- 	GetTag() string
  	GetStream() *pb.GateService_BindStreamServer
  }

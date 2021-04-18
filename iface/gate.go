@@ -3,7 +3,7 @@ package iface
 import pb "github.com/andyzhou/gate/proto"
 
 /*
- * interface for gate
+ * interface for gate for client side
  */
 
 type IGate interface {
@@ -22,5 +22,5 @@ type IGate interface {
 
 	//set cb
 	SetCBForStreamReceived(cb func(from string, in *pb.ByteMessage) bool) bool
-	SetCBForGateDown(cb func(kind, address string) bool) bool
+	SetCBForGateServerDown(cb func(kind, address string) bool) bool
 }

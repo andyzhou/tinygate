@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/andyzhou/gate/define"
-	"github.com/andyzhou/gate/face"
+	"github.com/andyzhou/gate/iface"
 	"github.com/andyzhou/gate/json"
 	pb "github.com/andyzhou/gate/proto"
 	"io"
@@ -27,10 +27,12 @@ import (
 
  //service info
  type Service struct {
+ 	node iface.INode
+ 	clientStreamMap map[string]pb.GateService_BindStreamServer //remoteAddr -> stream interface
  	cbForBindUnBindNode func(obj *json.BindJson) bool //cb for bind or unbind node
- 	cbForStreamReq func(connIds []uint32, messageId uint32, data []byte) bool //cb for stream request
- 	cbForGenReq func(req *pb.GateReq) *pb.GateResp //cb for gen request
-	lazyCastChan chan Response
+ 	cbForStreamReq func(remoteAddr string, req *pb.ByteMessage) bool //cb for client stream request
+ 	cbForGenReq func(req *pb.GateReq) *pb.GateResp //cb for client gen request
+	respChan chan Response //chan for send response
 	closeChan chan bool
  	Base
  }
@@ -39,44 +41,15 @@ import (
 func NewService() *Service {
 	//self init
 	this := &Service{
-		lazyCastChan:make(chan Response, define.LazyCastChanSize),
+		clientStreamMap: make(map[string]pb.GateService_BindStreamServer),
+		respChan:make(chan Response, define.ResponseChanSize),
 		closeChan:make(chan bool, 1),
 	}
 
 	//spawn main process
-	go this.runMainProcess()
+	//go this.runMainProcess()
 
 	return this
-}
- 
-//set cb for bind or unbind node
-//if sub service send `MessageIdOfBindOrUnbind`, need call the cb
-func (r *Service) SetCBForBindUnBindNode(cb func(obj *json.BindJson) bool) bool {
-	if cb == nil {
-		return false
-	}
-	r.cbForBindUnBindNode = cb
-	return true
-}
-
-//set cb for general request
-//the request from gate client side
-func (r *Service) SetCBForGenReq(cb func(req *pb.GateReq) *pb.GateResp) bool {
-	if cb == nil {
-		return false
-	}
-	r.cbForGenReq = cb
-	return true
-}
-
-//set cb for stream request
-//the request from gate client side
-func (r *Service) SetCBForStreamReq(cb func(connIds []uint32, messageId uint32, data []byte) bool) bool {
-	if cb == nil {
-		return false
-	}
-	r.cbForStreamReq = cb
-	return true
 }
 
 //quit
@@ -91,8 +64,64 @@ func (r *Service) Quit() {
 	//send to close chan
 	r.closeChan <- true
 }
+ 
+//set not face
+func (r *Service) SetNodeFace(node iface.INode) bool {
+	if node == nil {
+		return false
+	}
+	r.node = node
+	return true
+}
+ 
+//set cb for bind or unbind node
+//if sub service send `MessageIdOfBindOrUnbind`, need call the cb
+func (r *Service) SetCBForBindUnBindNode(cb func(obj *json.BindJson) bool) bool {
+	if cb == nil {
+		return false
+	}
+	r.cbForBindUnBindNode = cb
+	return true
+}
+
+//set cb for client general request
+func (r *Service) SetCBForGenReq(cb func(req *pb.GateReq) *pb.GateResp) bool {
+	if cb == nil {
+		return false
+	}
+	r.cbForGenReq = cb
+	return true
+}
+
+//set cb for client stream request
+func (r *Service) SetCBForStreamReq(cb func(remoteAddr string, req *pb.ByteMessage) bool) bool {
+	if cb == nil {
+		return false
+	}
+	r.cbForStreamReq = cb
+	return true
+}
+
+ //send stream data to remote client
+func (r *Service) SendToClient(remoteAddr string, in *pb.ByteMessage) error {
+	//basic check
+	if remoteAddr == "" || in == nil {
+		return errors.New("invalid parameter")
+	}
+
+	//get client stream
+	stream, ok := r.clientStreamMap[remoteAddr]
+	if !ok || stream == nil {
+		return errors.New("can't get stream by address")
+	}
+
+	//send to client
+	err := stream.SendMsg(in)
+	return err
+}
 
 //implement interface of `GenReq`
+//this is sync request
 func (r *Service) GenReq(ctx context.Context, in *pb.GateReq) (*pb.GateResp, error) {
 	if in == nil {
 		return nil, errors.New("invalid parameter")
@@ -110,20 +139,17 @@ func (r *Service) GenReq(ctx context.Context, in *pb.GateReq) (*pb.GateResp, err
 }
 
  //implement interface of `BindStream`
- //receive stream data from rpc client
+ //receive stream data from rpc client side
 func (r *Service) BindStream(stream pb.GateService_BindStreamServer) error {
 	var (
 		in *pb.ByteMessage
 		err error
 		tips string
+		remoteAddr string
 		messageId uint32
 		bRet bool
-		nodeJson = json.NewNodeJson()
 		bindJson = json.NewBindJson()
 	)
-
-	//get relate face
-	nodeFace := face.RunInterFace.GetNodeFace()
 
 	//get context
 	ctx := stream.Context()
@@ -135,6 +161,12 @@ func (r *Service) BindStream(stream pb.GateService_BindStreamServer) error {
 		log.Println(tips)
 		return errors.New(tips)
 	}
+
+	//get remote addr
+	remoteAddr = tag.RemoteAddr.String()
+
+	//add remote stream into map
+	r.clientStreamMap[remoteAddr] = stream
 
 	//try receive stream data from node
 	for {
@@ -160,21 +192,6 @@ func (r *Service) BindStream(stream pb.GateService_BindStreamServer) error {
 
 			//do relate opt by message id
 			switch messageId {
-			case define.MessageIdOfNodeUp:
-				//node up
-				{
-					//this be auto send from rpc client of sub service
-					//decode byte data
-					bRet = nodeJson.Decode(in.Data)
-					if bRet {
-						//just node up notify
-						nodeFace.NodeUp(
-							tag.RemoteAddr.String(),
-							nodeJson,
-							&stream,
-						)
-					}
-				}
 			case define.MessageIdOfBindOrUnbind:
 				//player bind or unbind node request from sub service
 				{
@@ -191,15 +208,10 @@ func (r *Service) BindStream(stream pb.GateService_BindStreamServer) error {
 				}
 			default:
 				{
-					//process input data from rpc service node
-					//pre process and cast to relate tcp client
-					resp := &Response{
-						remoteAddr:tag.RemoteAddr.String(),
-						byteMessage:*in,
+					//input stream data from rpc client node side
+					if r.cbForStreamReq != nil {
+						r.cbForStreamReq(remoteAddr, in)
 					}
-
-					//send to chan
-					r.lazyCastChan <- *resp
 				}
 			}
 		}
@@ -212,63 +224,63 @@ func (r *Service) BindStream(stream pb.GateService_BindStreamServer) error {
 //private func
 ///////////////
 
-//process response from sub service
-//send response to client pass tcp
-func (r *Service) processResponse(resp *Response) bool {
-	//get tcp connect id and cast to it
-	connId := resp.byteMessage.ConnId
-	messageId := resp.byteMessage.MessageId
-	data := resp.byteMessage.Data
-
-	//basic check
-	if messageId < 0 || data == nil {
-		return false
-	}
-
-	//check the cb for stream request data
-	if r.cbForStreamReq == nil {
-		return false
-	}
-
-	//check cast connect ids first
-	castConnIds := resp.byteMessage.CastConnIds
-	if castConnIds != nil && len(castConnIds) > 0 {
-		//cast batch
-		r.cbForStreamReq(castConnIds, messageId, data)
-	}else{
-		//only one
-		//begin cast data to tcp client
-		r.cbForStreamReq([]uint32{connId}, messageId, data)
-	}
-
-	return true
-}
-
-//run main process
-func (r *Service) runMainProcess() {
-	var (
-		resp Response
-		needQuit, isOk bool
-	)
-
-	//defer close
-	defer func() {
-		close(r.lazyCastChan)
-		close(r.closeChan)
-	}()
-
-	//loop
-	for {
-		if needQuit && len(r.lazyCastChan) <= 0 {
-			break
-		}
-		select {
-		case resp, isOk = <- r.lazyCastChan:
-			if isOk {
-				r.processResponse(&resp)
-			}
-		case <- r.closeChan:
-			needQuit = true
-		}
-	}
-}
+////process response from sub service
+////send response to client pass tcp
+//func (r *Service) processResponse(resp *Response) bool {
+//	//get tcp connect id and cast to it
+//	connId := resp.byteMessage.ConnId
+//	messageId := resp.byteMessage.MessageId
+//	data := resp.byteMessage.Data
+//
+//	//basic check
+//	if messageId < 0 || data == nil {
+//		return false
+//	}
+//
+//	//check the cb for stream request data
+//	if r.cbForStreamReq == nil {
+//		return false
+//	}
+//
+//	//check cast connect ids first
+//	castConnIds := resp.byteMessage.CastConnIds
+//	if castConnIds != nil && len(castConnIds) > 0 {
+//		//cast batch
+//		r.cbForStreamReq(castConnIds, messageId, data)
+//	}else{
+//		//only one
+//		//begin cast data to tcp client
+//		r.cbForStreamReq([]uint32{connId}, messageId, data)
+//	}
+//
+//	return true
+//}
+//
+////run main process
+//func (r *Service) runMainProcess() {
+//	var (
+//		resp Response
+//		needQuit, isOk bool
+//	)
+//
+//	//defer close
+//	defer func() {
+//		close(r.respChan)
+//		close(r.closeChan)
+//	}()
+//
+//	//loop
+//	for {
+//		if needQuit && len(r.respChan) <= 0 {
+//			break
+//		}
+//		select {
+//		case resp, isOk = <- r.respChan:
+//			if isOk {
+//				r.processResponse(&resp)
+//			}
+//		case <- r.closeChan:
+//			needQuit = true
+//		}
+//	}
+//}

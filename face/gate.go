@@ -18,7 +18,7 @@ import (
  *
  * - inter face for client communicate with gate server
  * - support node detect, data receive and cast
- * - sub service will be gate client
+ * - tcp service will be client side
  */
 
 //inter macro define
@@ -29,32 +29,32 @@ const (
 
 //gate info
 type Gate struct {
-	kind string
+	kind string //service kind
 	tags []string
-	address string `remote server address, host:port`
-	cbForGenReq func(in *pb.GateReq) *pb.GateResp `call back for gen request`
-	cbForStreamReceived func(from string, in *pb.ByteMessage) bool `call back for received data`
-	cbForGateDown func(kind, addr string) bool `call back for gate server down`
-	conn *grpc.ClientConn `rpc client connect`
-	client pb.GateServiceClient `service client`
-	stream pb.GateService_BindStreamClient `stream client`
+	address string //remote server address, host:port
+	conn *grpc.ClientConn //rpc client connect
+	client pb.GateServiceClient //service client
+	stream pb.GateService_BindStreamClient //stream client
 	ctx context.Context
 	reqChan chan pb.ByteMessage
 	closeChan chan bool
 	needQuit bool
 	sync.RWMutex
+	//cb func
+	cbForStreamReceived func(from string, in *pb.ByteMessage) bool //call back for received data
+	cbForGateServerDown func(kind, addr string) bool //call back for gate server down
 }
 
 //construct
 func NewGate(
-			kind,
+			serviceKind,
 			serverHost string,
 			serverPort int,
 			tags ... string,
 		) *Gate {
 	//self init
 	this := &Gate{
-		kind:kind,
+		kind:serviceKind,
 		tags:tags,
 		address:fmt.Sprintf("%s:%d", serverHost, serverPort),
 		ctx:context.Background(),
@@ -141,7 +141,8 @@ func (c *Gate) GetConnStat()string {
 	return c.conn.GetState().String()
 }
 
-//send general request
+//send general request to gate server
+//this is sync request
 func (c *Gate) SendGenReq(in *pb.GateReq) *pb.GateResp {
 	if in == nil {
 		return nil
@@ -165,13 +166,13 @@ func (c *Gate) SetCBForStreamReceived(
 }
 
 //set cb for gate server down
-func (c *Gate) SetCBForGateDown(
+func (c *Gate) SetCBForGateServerDown(
 				cb func(string, string) bool,
 			) bool {
-	if cb == nil || c.cbForGateDown != nil {
+	if cb == nil || c.cbForGateServerDown != nil {
 		return false
 	}
-	c.cbForGateDown = cb
+	c.cbForGateServerDown = cb
 	return true
 }
 
@@ -193,11 +194,11 @@ func (c *Gate) castData(in *pb.ByteMessage) bool {
 		//try reconnect
 		return false
 	}
-
 	return true
 }
 
 //receive stream data from gate server
+//if set cb, will call the cb for received stream data
 func (c *Gate) receiveGateStream() {
 	var (
 		in *pb.ByteMessage
@@ -219,9 +220,9 @@ func (c *Gate) receiveGateStream() {
 		if err != nil {
 			log.Println("Gate::receiveGateStream, Receive gate data failed, " +
 						"err:", err.Error())
-			//gate server down?
-			if c.cbForGateDown != nil {
-				c.cbForGateDown(c.kind, c.address)
+			//gate server down, call the relate cb func
+			if c.cbForGateServerDown != nil {
+				c.cbForGateServerDown(c.kind, c.address)
 			}
 			break
 		}
@@ -299,7 +300,7 @@ func (c *Gate) connect(isReConn bool) bool {
 		return false
 	}
 
-	//create stream of both side
+	//try create stream of both side
 	tryTimes := 0
 	for {
 		stream, err = client.BindStream(c.ctx)
@@ -319,10 +320,10 @@ func (c *Gate) connect(isReConn bool) bool {
 
 	//sync gate property
 	c.Lock()
-	defer c.Unlock()
 	c.conn = conn
 	c.stream = stream
 	c.client = client
+	c.Unlock()
 
 	//notify gate server
 	c.notifyServer()

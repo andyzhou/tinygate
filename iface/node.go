@@ -6,19 +6,16 @@ import (
 )
 
 /*
- * interface for sub service node
+ * interface for node
  */
 
  type INode interface {
  	Quit()
- 	PickNode(kind string) string
- 	GetServiceByTag(kind, tag string) IService
  	GetService(address string) IService
  	GetAllService() map[string]IService
- 	GetKind(address string) string
- 	NodeDown(address string) bool
- 	NodeUp(address string, jsonObj *json.NodeJson, stream *pb.GateService_BindStreamServer) bool
+ 	ClientNodeDown(address string) bool
+ 	ClientNodeUp(address string, jsonObj *json.NodeJson, stream *pb.GateService_BindStreamServer) bool
 
- 	//set cb for sub service node down
- 	SetCBForNodeDown(cb func(serviceKind, remoteAddr string) bool) bool
+ 	//set cb for client node down
+ 	SetCBForClientNodeDown(cb func(remoteAddr string) bool) bool
  }

@@ -3,7 +3,7 @@ package gate
 import (
 	"fmt"
 	"github.com/andyzhou/gate/face"
-	"github.com/andyzhou/gate/json"
+	"github.com/andyzhou/gate/iface"
 	"github.com/andyzhou/gate/proto"
 	"github.com/andyzhou/gate/rpc"
 	"google.golang.org/grpc"
@@ -14,15 +14,15 @@ import (
 /*
  * gate service
  *
- * - api for sub service side
+ * - service api for sub service side
  * - base on g-rpc
  * - receive request from client side
  */
 
-
 //service info
 type Service struct {
 	address string `rpc service address`
+	node iface.INode `client node manage instance`
 	rpc *rpc.Service `rpc service instance`
 	service *grpc.Server `g-rpc server`
 }
@@ -33,6 +33,7 @@ func NewService(port int) *Service {
 	address := fmt.Sprintf(":%d", port)
 	this := &Service{
 		address:address,
+		node: face.NewNode(),
 		rpc:rpc.NewService(),
 		service:nil,
 	}
@@ -55,23 +56,22 @@ func (r *Service) Start() {
 	r.createService()
 }
 
-//set cb for sub service node down
-func (r *Service) SetCBForSubServiceNodeDown(cb func(serviceKind, remoteAddr string) bool) bool {
-	nodeFace := face.RunInterFace.GetNodeFace()
-	if nodeFace == nil {
+//set cb for client node down
+func (r *Service) SetCBForClientNodeDown(cb func(remoteAddr string) bool) bool {
+	if r.node == nil {
 		return false
 	}
-	return nodeFace.SetCBForNodeDown(cb)
+	return r.node.SetCBForClientNodeDown(cb)
 }
 
 //set cb for bind or unbind node
 //if sub service send `MessageIdOfBindOrUnbind`, need call the cb
-func (r *Service) SetCBForBindUnBindNode(cb func(obj *json.BindJson) bool) bool {
-	return r.rpc.SetCBForBindUnBindNode(cb)
-}
+//func (r *Service) SetCBForBindUnBindNode(cb func(obj *json.BindJson) bool) bool {
+//	return r.rpc.SetCBForBindUnBindNode(cb)
+//}
 
 //set cb of stream request from gate client
-func (r *Service) SetCBForStreamReq(cb func(connIds []uint32, messageId uint32, data []byte) bool) bool {
+func (r *Service) SetCBForStreamReq(cb func(remoteAddr string, in *gate.ByteMessage) bool) bool {
 	return r.rpc.SetCBForStreamReq(cb)
 }
 
@@ -80,99 +80,43 @@ func (r *Service) SetCBForGenReq(cb func(req *gate.GateReq) *gate.GateResp) bool
 	return r.rpc.SetCBForGenReq(cb)
 }
 
-//pick one node tag by kind
-func (r *Service) PickNodeByKind(kind string) string {
-	if kind == "" {
-		return ""
-	}
-	//get node face
-	nodeFace := face.RunInterFace.GetNodeFace()
-	if nodeFace == nil {
-		return ""
-	}
-	return nodeFace.PickNode(kind)
-}
-
-//////////////////////////////////////
-//multi kind send data to sub service
-//////////////////////////////////////
-
-//send data to assigned address of gate client
-func (r *Service) SendClientReqByAddress(address string, req *gate.ByteMessage) bool {
+//send stream data to gate client by remote address
+func (r *Service) SendStreamDataResp(address string, resp *gate.ByteMessage) bool {
 	//basic check
-	if address == "" || req == nil {
+	if address == "" || resp == nil {
+		return false
+	}
+	if r.node == nil {
 		return false
 	}
 
-	//get node face
-	nodeFace := face.RunInterFace.GetNodeFace()
-	if nodeFace == nil {
-		return false
-	}
-
-	//get service by address
-	subService := nodeFace.GetService(address)
+	//get target client by address
+	subService := r.node.GetService(address)
 	if subService == nil {
 		return false
 	}
 
-	//cast data
-	bRet := subService.SendClientReq(req)
-	return bRet
-}
-
-//send data to assigned kind gate client
-func (r *Service) SendClientReqByKind(kind string, req *gate.ByteMessage) bool {
-	//basic check
-	if kind == "" || req == nil {
-		return false
-	}
-
-	//get node face
-	nodeFace := face.RunInterFace.GetNodeFace()
-	if nodeFace == nil {
-		return false
-	}
-
-	//get node tag by kind
-	nodeTag := nodeFace.PickNode(kind)
-	if nodeTag == "" {
-		return false
-	}
-
-	//get service by kind and tag
-	subService := nodeFace.GetServiceByTag(kind, nodeTag)
-	if subService == nil {
-		return false
-	}
-
-	//cast data
-	bRet := subService.SendClientReq(req)
+	//cast resp stream data to client node
+	bRet := subService.SendClientResp(resp)
 	return bRet
 }
 
 //send data to all gate clients
-func (r *Service) SendClientReqToAll(req *gate.ByteMessage) bool {
+func (r *Service) SendClientReqToAll(resp *gate.ByteMessage) bool {
 	//basic check
-	if req == nil {
-		return false
-	}
-
-	//get node face
-	nodeFace := face.RunInterFace.GetNodeFace()
-	if nodeFace == nil {
+	if resp == nil || r.node == nil {
 		return false
 	}
 
 	//get all sub service
-	allSubService := nodeFace.GetAllService()
+	allSubService := r.node.GetAllService()
 	if allSubService == nil || len(allSubService) <= 0 {
 		return false
 	}
 
 	//send one by one
 	for _, service := range allSubService {
-		service.SendClientReq(req)
+		service.SendClientResp(resp)
 	}
 	return true
 }
@@ -185,7 +129,6 @@ func (r *Service) SendClientReqToAll(req *gate.ByteMessage) bool {
 func (r *Service) createService() {
 	var (
 		tips string
-		err error
 	)
 
 	//try listen tcp port
@@ -196,9 +139,12 @@ func (r *Service) createService() {
 		panic(tips)
 	}
 
+	//init rpc stat
+	rpcStat := rpc.NewStat(r.node)
+
 	//create rpc server with rpc stat support
 	r.service = grpc.NewServer(
-					grpc.StatsHandler(rpc.NewStat()),
+					grpc.StatsHandler(rpcStat),
 				)
 
 	//register call back

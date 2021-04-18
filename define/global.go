@@ -15,5 +15,5 @@ const (
 //client relate
 const (
 	ClientReqChanSize = 2048
-	LazyCastChanSize = 4096
+	ResponseChanSize = 4096
 )
