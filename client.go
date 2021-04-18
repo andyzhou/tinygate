@@ -52,6 +52,7 @@ func (c *Client) SetCBForGateServerDown(
 }
 
 //set call back for gate server up
+//STEP-4
 func (c *Client) SetCBForGateServerUp(
 			cb func(kind, addr string) bool,
 		) bool {
@@ -65,7 +66,7 @@ func (c *Client) SetLog(dir, tag string) bool {
 
 //add gate server
 //support multi gates
-//STEP-4
+//STEP-5
 func (c *Client) AddGateServer(serviceKind, host string, port int) bool {
 	return c.client.AddGateServer(serviceKind, host, port)
 }
