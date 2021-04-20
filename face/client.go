@@ -166,33 +166,6 @@ func (c *Client) AddGateServer(
 	return true
 }
 
-////bind batch node and tag for single client
-//func (c *Client) BindNodeTags(
-//			fromAddr string,
-//			bindJson *json.BindJson,
-//		) bool {
-//	//basic check
-//	if fromAddr == "" || bindJson == nil {
-//		return false
-//	}
-//
-//	//set opt
-//	bindJson.Opt = define.NodeOptBind
-//
-//	//init byte message
-//	in := &pb.ByteMessage{
-//		MessageId:define.MessageIdOfBindOrUnbind,
-//		ConnId:bindJson.ConnId,
-//		PlayerId:bindJson.PlayerId,
-//		Data:bindJson.Encode(),
-//	}
-//
-//	//send to remote gate server
-//	bRet := c.CastData(fromAddr, in)
-//
-//	return bRet
-//}
-
 //send general request to remote gate server
 func (c *Client) SendGenReq(in *pb.GateReq) *pb.GateResp {
 	var (
@@ -285,8 +258,8 @@ func (c *Client) runMainProcess() {
 			log.Println("Client:runMainProcess panic, err:", err)
 		}
 
+		//clean up
 		ticker.Stop()
-		//close chan
 		close(c.closeChan)
 	}()
 

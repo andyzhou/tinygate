@@ -66,12 +66,6 @@ func (r *Service) SetCBForClientNodeDown(cb func(remoteAddr string) bool) bool {
 	return r.node.SetCBForClientNodeDown(cb)
 }
 
-//set cb for bind or unbind node
-//if sub service send `MessageIdOfBindOrUnbind`, need call the cb
-//func (r *Service) SetCBForBindUnBindNode(cb func(obj *json.BindJson) bool) bool {
-//	return r.rpc.SetCBForBindUnBindNode(cb)
-//}
-
 //set cb of stream request from gate client
 func (r *Service) SetCBForStreamReq(cb func(remoteAddr string, in *gate.ByteMessage) bool) bool {
 	return r.rpc.SetCBForStreamReq(cb)
@@ -83,24 +77,32 @@ func (r *Service) SetCBForGenReq(cb func(req *gate.GateReq) *gate.GateResp) bool
 }
 
 //send stream data to gate client by remote address
-func (r *Service) SendStreamDataResp(address string, resp *gate.ByteMessage) bool {
+func (r *Service) SendStreamDataResp(resp *gate.ByteMessage, address ...string) bool {
+	var (
+		subService iface.IService
+	)
+
 	//basic check
-	if address == "" || resp == nil {
+	if address == nil || resp == nil {
 		return false
 	}
 	if r.node == nil {
 		return false
 	}
 
-	//get target client by address
-	subService := r.node.GetService(address)
-	if subService == nil {
-		return false
+	//send one by one
+	for _, oneAddr := range address {
+		//get target client by address
+		subService = r.node.GetService(oneAddr)
+		if subService == nil {
+			continue
+		}
+
+		//cast resp stream data to client node
+		subService.SendClientResp(resp)
 	}
 
-	//cast resp stream data to client node
-	bRet := subService.SendClientResp(resp)
-	return bRet
+	return true
 }
 
 //send stream data to all gate clients

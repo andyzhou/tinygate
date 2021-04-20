@@ -9,9 +9,10 @@ import (
 /*
  * gate client
  *
- * - used at tcp server side
+ * - used at tcp/websocket server side
  * - communicate with gate server
  * - send request to gate server/sub service
+ * - request include general sync and stream mode
  * - receive response from gate server/sub service
  */
 
@@ -38,7 +39,7 @@ func (c *Client) Quit() {
 //set call back for received stream data from gate server
 //STEP-2
 func (c *Client) SetCBForStreamReceived(
-			cb func(from string, in *pb.ByteMessage) bool,
+			cb func(fromAddress string, in *pb.ByteMessage) bool,
 		) bool {
 	return c.client.SetCBForStreamReceived(cb)
 }
@@ -46,7 +47,7 @@ func (c *Client) SetCBForStreamReceived(
 //set call back for gate server down
 //STEP-3
 func (c *Client) SetCBForGateServerDown(
-			cb func(kind, addr string) bool,
+			cb func(serviceKind, addr string) bool,
 		) bool {
 	return c.client.SetCBForGateServerDown(cb)
 }
@@ -54,7 +55,7 @@ func (c *Client) SetCBForGateServerDown(
 //set call back for gate server up
 //STEP-4
 func (c *Client) SetCBForGateServerUp(
-			cb func(kind, addr string) bool,
+			cb func(serviceKind, addr string) bool,
 		) bool {
 	return c.client.SetCBForGateServerUp(cb)
 }
@@ -73,11 +74,11 @@ func (c *Client) AddGateServer(serviceKind, host string, port int) bool {
 
 //pick one gate by service kind
 //return gate instance
-func (c *Client) PickGateServer(kind string) iface.IGate {
-	return c.client.PickOneGateServer(kind)
+func (c *Client) PickGateServer(serviceKind string) iface.IGate {
+	return c.client.PickOneGateServer(serviceKind)
 }
 
-//send gen request
+//send gen sync request
 func (c *Client) SendGenReq(in *pb.GateReq) *pb.GateResp {
 	return c.client.SendGenReq(in)
 }
