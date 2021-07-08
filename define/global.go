@@ -12,8 +12,10 @@ const (
 	NodeRuleOfPersistent
 )
 
-//client relate
+//others
 const (
-	ClientReqChanSize = 2048
-	ResponseChanSize = 4096
+	GateReqChanSize = 1024 * 5
+	GateBindTryTimes = 5
+	GateStatCheckRate = 5 //xx seconds
+	ResponseChanSize = 1024 * 5
 )

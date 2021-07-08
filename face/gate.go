@@ -21,12 +21,6 @@ import (
  * - tcp service will be client side
  */
 
-//inter macro define
-const (
-	gateReqChanSize = 1024 * 5
-	gateBindTryTimes = 5
-)
-
 //gate info
 type Gate struct {
 	kind string //service kind
@@ -59,7 +53,7 @@ func NewGate(
 		tags:tags,
 		address:fmt.Sprintf("%s:%d", serverHost, serverPort),
 		ctx:context.Background(),
-		reqChan:make(chan pb.ByteMessage, gateReqChanSize),
+		reqChan:make(chan pb.ByteMessage, define.GateReqChanSize),
 		closeChan:make(chan bool, 1),
 	}
 
@@ -319,7 +313,7 @@ func (c *Gate) connect(isReConn bool) bool {
 		if err == nil {
 			break
 		}
-		if err != nil && tryTimes >= gateBindTryTimes {
+		if err != nil && tryTimes >= define.GateBindTryTimes {
 			//too many errors, need break
 			return false
 		}

@@ -103,6 +103,9 @@ func (f *Service) runMainProcess() {
 
 	//defer close chan
 	defer func() {
+		if err := recover(); err != nil {
+			log.Println("Service::runMainProcess panic, err:", err)
+		}
 		close(f.clientRespChan)
 		close(f.closeChan)
 	}()
@@ -118,7 +121,8 @@ func (f *Service) runMainProcess() {
 				//cast to client node pass stream mode
 				err = (*f.stream).Send(&resp)
 				if err != nil {
-					log.Println("Service::runMainProcess send failed, err:", err.Error())
+					log.Println("Service::runMainProcess send failed, err:",
+								err.Error())
 				}
 			}
 		case <- f.closeChan:

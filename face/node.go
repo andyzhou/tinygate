@@ -82,6 +82,7 @@ func (f *Node) ClientNodeDown(
 	f.Lock()
 	defer f.Unlock()
 	delete(f.clientNodes, remoteAddress)
+	delete(f.serviceMap, remoteAddress)
 	return true
 }
 

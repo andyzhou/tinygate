@@ -2,6 +2,7 @@ package face
 
 import (
 	"fmt"
+	"github.com/andyzhou/gate/define"
 	"github.com/andyzhou/gate/iface"
 	pb "github.com/andyzhou/gate/proto"
 	"log"
@@ -17,11 +18,6 @@ import (
  * - support multi gate servers
  * - communicate with gate server pass general and stream mode
  */
-
-//inter macro define
-const (
-	GateStatCheckRate = 5 //xx seconds
-)
 
 //client info
 type Client struct {
@@ -248,8 +244,7 @@ func (c *Client) CastDataToAll(in *pb.ByteMessage) bool {
 //run main process
 func (c *Client) runMainProcess() {
 	var (
-		ticker = time.NewTicker(time.Second * GateStatCheckRate)
-		needQuit bool
+		ticker = time.NewTicker(time.Second * define.GateStatCheckRate)
 	)
 
 	//defer
@@ -265,9 +260,6 @@ func (c *Client) runMainProcess() {
 
 	//loop
 	for {
-		if needQuit == true {
-			break
-		}
 		select {
 		case <- ticker.C:
 			{
@@ -275,7 +267,7 @@ func (c *Client) runMainProcess() {
 				c.checkGateStatus()
 			}
 		case <- c.closeChan:
-			needQuit = true
+			return
 		}
 	}
 }

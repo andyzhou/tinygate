@@ -74,7 +74,7 @@ func main()  {
 	wg.Add(1)
 	fmt.Println("start client..")
 
-	go sendGenReqToGate(c)
+	//go sendGenReqToGate(c)
 	go sendStreamDataToGate(c)
 
 	wg.Wait()
@@ -85,7 +85,7 @@ func main()  {
 func sendGenReqToGate(c *gate.Client)  {
 	var (
 		in = pb.GateReq{}
-		ticker = time.NewTicker(time.Second * 2)
+		ticker = time.NewTicker(time.Second / 10)
 		messageData string
 	)
 

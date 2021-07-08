@@ -154,6 +154,15 @@ func (r *Service) BindStream(stream pb.GateService_BindStreamServer) error {
 	//client node up
 	r.node.ClientNodeUp(remoteAddr, &stream)
 
+	//defer
+	defer func() {
+		if err := recover(); err != nil {
+			log.Println("Stream::BindStream panic, err:", err)
+		}
+		//clean up
+		delete(r.clientStreamMap, remoteAddr)
+	}()
+
 	//try receive stream data from node
 	for {
 		select {
