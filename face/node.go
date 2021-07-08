@@ -17,7 +17,6 @@ import (
  type Node struct {
  	cbForClientNodeDown func(remoteAddr string) bool
  	serviceMap map[string]iface.IService //client service map, remoteAddr -> IService
- 	clientNodes map[string]int64 //active client node map, remoteAddr -> activeTime`
  	sync.RWMutex
  }
 
@@ -26,7 +25,6 @@ func NewNode() *Node {
 	//self init
 	this := &Node{
 		serviceMap:make(map[string]iface.IService),
-		clientNodes:make(map[string]int64),
 	}
 
 	return this
@@ -81,7 +79,6 @@ func (f *Node) ClientNodeDown(
 	//remove with locker
 	f.Lock()
 	defer f.Unlock()
-	delete(f.clientNodes, remoteAddress)
 	delete(f.serviceMap, remoteAddress)
 	return true
 }
