@@ -1,11 +1,18 @@
 syntax="proto3";
 package gate;
+option java_package = "com.tc.gate";
 
 //define node status
 enum NodeStatus {
     NODE_DOWN = 0;
     NODE_UP = 1;
     NODE_MAINTAIN = 2;
+}
+
+//auth info
+message AccessAuth {
+    string app = 1;
+    string token = 2;
 }
 
 //byte message data
@@ -25,6 +32,7 @@ message GateReq {
     string address = 3; //assigned address
     bytes data = 4; //json byte data
     bool isAsync = 5; //async mode switcher
+    AccessAuth auth = 6; //option
 }
 
 //general response

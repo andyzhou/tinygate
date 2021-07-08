@@ -131,11 +131,14 @@ func sendStreamDataToGate(c *gate.Client) {
 	//defer
 	defer func() {
 		ticker.Stop()
+		fmt.Println("sendStreamDataToGate done.")
 	}()
 
 	//loop
 	messageIdStart := uint32(10)
 	messageIdEnd := 30
+	maxTimes := 5
+	startTime := 1
 	for {
 		select {
 		case <- ticker.C:
@@ -150,6 +153,10 @@ func sendStreamDataToGate(c *gate.Client) {
 
 				//cast to all gate server
 				c.CastDataToAll(&in)
+				startTime++
+				if startTime > maxTimes {
+					return
+				}
 			}
 		}
 	}

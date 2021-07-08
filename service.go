@@ -28,14 +28,13 @@ type Service struct {
 }
 
 //construct
-func NewService(port int) *Service {
+func NewService(rpcPort int) *Service {
 	//self init
-	address := fmt.Sprintf(":%d", port)
+	address := fmt.Sprintf(":%d", rpcPort)
 	this := &Service{
 		address:address,
 		node: face.NewNode(),
 		rpc:rpc.NewService(),
-		service:nil,
 	}
 	//set node face for rpc service
 	this.rpc.SetNodeFace(this.node)
@@ -44,6 +43,12 @@ func NewService(port int) *Service {
 
 //stop
 func (r *Service) Stop() {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Println("Service:Stop panic, err:", err)
+		}
+	}()
+	//do some cleanup
 	if r.service != nil {
 		r.service.Stop()
 	}
@@ -57,6 +62,12 @@ func (r *Service) Start() {
 	//create rpc service
 	r.createService()
 }
+
+
+
+///////////////////
+//cb for stream mode
+///////////////////
 
 //set cb for client node down
 func (r *Service) SetCBForClientNodeDown(cb func(remoteAddr string) bool) bool {
@@ -129,14 +140,10 @@ func (r *Service) SendStreamDataRespToAll(resp *gate.ByteMessage) bool {
 
 //create rpc service
 func (r *Service) createService() {
-	var (
-		tips string
-	)
-
 	//try listen tcp port
 	listen, err := net.Listen("tcp", r.address)
 	if err != nil {
-		tips = "Create rpc service failed, error:" + err.Error()
+		tips := "Create rpc service failed, error:" + err.Error()
 		log.Println(tips)
 		panic(tips)
 	}

@@ -19,7 +19,7 @@ protoc --go_out=plugins=grpc:. *.proto
 - see code under the `example` dir
  
  # tips
- 
+ - support gen and stream mode
  - if use for tcp service, tcp server will be client side
  - sub service will be server side, receive request from tcp server,
    and send resp data to tcp server.
