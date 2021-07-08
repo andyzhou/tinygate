@@ -23,7 +23,7 @@ import (
 
 //inter macro define
 const (
-	gateReqChanSize = 1024
+	gateReqChanSize = 1024 * 5
 	gateBindTryTimes = 5
 )
 
@@ -232,7 +232,7 @@ func (c *Gate) receiveGateStream() {
 		if err != nil {
 			log.Println("Gate::receiveGateStream, Receive gate data failed, " +
 						"err:", err.Error())
-			//gate server down, call the relate cb func
+			//gate server down, call the relate cb func to notify client side
 			if c.cbForGateServerDown != nil {
 				c.cbForGateServerDown(c.kind, c.address)
 			}

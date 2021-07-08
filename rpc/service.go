@@ -5,7 +5,6 @@ import (
 	"errors"
 	"github.com/andyzhou/gate/define"
 	"github.com/andyzhou/gate/iface"
-	"github.com/andyzhou/gate/json"
 	pb "github.com/andyzhou/gate/proto"
 	"io"
 	"log"
@@ -29,7 +28,6 @@ import (
  type Service struct {
  	node iface.INode
  	clientStreamMap map[string]pb.GateService_BindStreamServer //remoteAddr -> stream interface
- 	cbForBindUnBindNode func(obj *json.BindJson) bool //cb for bind or unbind node
  	cbForStreamReq func(remoteAddr string, req *pb.ByteMessage) bool //cb for client stream request
  	cbForGenReq func(req *pb.GateReq) *pb.GateResp //cb for client gen request
 	respChan chan Response //chan for send response
@@ -45,9 +43,6 @@ func NewService() *Service {
 		respChan:make(chan Response, define.ResponseChanSize),
 		closeChan:make(chan bool, 1),
 	}
-
-	//spawn main process
-	//go this.runMainProcess()
 
 	return this
 }
@@ -71,16 +66,6 @@ func (r *Service) SetNodeFace(node iface.INode) bool {
 		return false
 	}
 	r.node = node
-	return true
-}
- 
-//set cb for bind or unbind node
-//if sub service send `MessageIdOfBindOrUnbind`, need call the cb
-func (r *Service) SetCBForBindUnBindNode(cb func(obj *json.BindJson) bool) bool {
-	if cb == nil {
-		return false
-	}
-	r.cbForBindUnBindNode = cb
 	return true
 }
 
@@ -147,8 +132,6 @@ func (r *Service) BindStream(stream pb.GateService_BindStreamServer) error {
 		tips string
 		remoteAddr string
 		messageId uint32
-		bRet bool
-		bindJson = json.NewBindJson()
 	)
 
 	//get context
@@ -195,20 +178,6 @@ func (r *Service) BindStream(stream pb.GateService_BindStreamServer) error {
 
 			//do relate opt by message id
 			switch messageId {
-			case define.MessageIdOfBindOrUnbind:
-				//player bind or unbind node request from sub service
-				{
-					//this send from rpc client of sub services
-					//used for bind client and multi kind node
-					//will call gate server cb for this message id
-					bRet = bindJson.Decode(in.Data)
-					if bRet {
-						//call the relate cb func
-						if r.cbForBindUnBindNode != nil {
-							r.cbForBindUnBindNode(bindJson)
-						}
-					}
-				}
 			default:
 				{
 					//input stream data from rpc client node side

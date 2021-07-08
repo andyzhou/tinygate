@@ -1,4 +1,6 @@
-# gate
+This is a gate service library, bridge the tcp/websocket and sub other service.
+
+# feature
  - rpc gate bridge interface
  - used for tcp4/6, websocket, http, etc.
  - use rpc stream mode for performance
