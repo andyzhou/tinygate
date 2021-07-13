@@ -21,10 +21,10 @@ import (
 
 //service info
 type Service struct {
-	address string `rpc service address`
-	node iface.INode `client node manage instance`
-	rpc *rpc.Service `rpc service instance`
-	service *grpc.Server `g-rpc server`
+	address string //rpc service address
+	node iface.INode //client node manage instance
+	rpc *rpc.Service //rpc service instance
+	service *grpc.Server //g-rpc server
 }
 
 //construct

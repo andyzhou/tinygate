@@ -17,7 +17,7 @@ import (
 type Stat struct {
 	node iface.INode
 	base *Base
-	connMap map[*stats.ConnTagInfo]string
+	//connMap map[*stats.ConnTagInfo]string
 }
 
 //construct
@@ -25,7 +25,7 @@ func NewStat(node iface.INode) *Stat {
 	this := &Stat{
 		node: node,
 		base:new(Base),
-		connMap:make(map[*stats.ConnTagInfo]string),
+		//connMap:make(map[*stats.ConnTagInfo]string),
 	}
 	return this
 }
