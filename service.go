@@ -63,32 +63,15 @@ func (r *Service) Start() {
 	r.createService()
 }
 
-
-
 ///////////////////
-//cb for stream mode
+//api
 ///////////////////
-
-//set cb for client node down
-func (r *Service) SetCBForClientNodeDown(cb func(remoteAddr string) bool) bool {
-	if r.node == nil {
-		return false
-	}
-	return r.node.SetCBForClientNodeDown(cb)
-}
-
-//set cb of stream request from gate client
-func (r *Service) SetCBForStreamReq(cb func(remoteAddr string, in *gate.ByteMessage) bool) bool {
-	return r.rpc.SetCBForStreamReq(cb)
-}
-
-//set cb of response for general request from gate client
-func (r *Service) SetCBForGenReq(cb func(req *gate.GateReq) *gate.GateResp) bool {
-	return r.rpc.SetCBForGenReq(cb)
-}
 
 //send stream data to gate client by remote address
-func (r *Service) SendStreamDataResp(resp *gate.ByteMessage, address ...string) bool {
+func (r *Service) SendStreamDataResp(
+					resp *gate.ByteMessage,
+					address ...string,
+				) bool {
 	var (
 		subService iface.IService
 	)
@@ -117,7 +100,9 @@ func (r *Service) SendStreamDataResp(resp *gate.ByteMessage, address ...string) 
 }
 
 //send stream data to all gate clients
-func (r *Service) SendStreamDataRespToAll(resp *gate.ByteMessage) bool {
+func (r *Service) SendStreamDataRespToAll(
+					resp *gate.ByteMessage,
+				) bool {
 	//basic check
 	if resp == nil || r.node == nil {
 		return false
@@ -134,6 +119,28 @@ func (r *Service) SendStreamDataRespToAll(resp *gate.ByteMessage) bool {
 		service.SendClientResp(resp)
 	}
 	return true
+}
+
+///////////////////
+//relate cb setup
+///////////////////
+
+//set cb for client node down
+func (r *Service) SetCBForClientNodeDown(cb func(remoteAddr string) bool) bool {
+	if r.node == nil {
+		return false
+	}
+	return r.node.SetCBForClientNodeDown(cb)
+}
+
+//set cb of stream request from gate client
+func (r *Service) SetCBForStreamReq(cb func(remoteAddr string, in *gate.ByteMessage) bool) bool {
+	return r.rpc.SetCBForStreamReq(cb)
+}
+
+//set cb of response for general request from gate client
+func (r *Service) SetCBForGenReq(cb func(req *gate.GateReq) *gate.GateResp) bool {
+	return r.rpc.SetCBForGenReq(cb)
 }
 
 /////////////////
