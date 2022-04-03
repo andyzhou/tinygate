@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/andyzhou/gate"
 	pb "github.com/andyzhou/gate/proto"
+	"log"
+	"math/rand"
 	"sync"
 	"time"
 )
@@ -15,18 +17,19 @@ import (
 const (
 	//rpc service port
 	rpcPort = 7100
+	maxMessageId = 100
 )
 
 //cb stream request from gate server
 func cbForStreamReq(remoteAddr string, req *pb.ByteMessage) bool {
-	fmt.Println("cbForStreamReq, remoteAddr:", remoteAddr)
+	log.Println("cbForStreamReq, remoteAddr:", remoteAddr)
 	return true
 }
 
 //cb for the request from gate client side
 //this for the sync request
 func cbForGenReq(in *pb.GateReq) *pb.GateResp {
-	fmt.Println("cbForGenReq, in messageId:", in.MessageId)
+	log.Println("cbForGenReq, in messageId:", in.MessageId)
 
 	//init resp
 	resp := &pb.GateResp{
@@ -61,19 +64,22 @@ func main() {
 	wg.Add(1)
 
 	//start
-	fmt.Printf("start service,localhost:%d\n", rpcPort)
+	log.Printf("start service,localhost:%d\n", rpcPort)
 	s.Start()
 
 	//send data to client
 	go sendDataToGateClient(s)
 
 	wg.Wait()
-	fmt.Println("stop service..")
+	log.Println("stop service..")
 }
 
 //send data to gate client
 func sendDataToGateClient(s *gate.Service) {
 	var (
+		messageId int
+		msgPara = "server side message %v"
+		msg string
 		in = pb.ByteMessage{}
 		ticker = time.NewTicker(time.Second * 3)
 	)
@@ -88,8 +94,10 @@ func sendDataToGateClient(s *gate.Service) {
 		select {
 		case <- ticker.C:
 			{
-				in.MessageId = 20
-				in.Data = []byte("server side message..")
+				messageId = rand.Intn(maxMessageId)
+				msg = fmt.Sprintf(msgPara, time.Now().Unix())
+				in.MessageId = uint32(messageId)
+				in.Data = []byte(msg)
 				s.SendStreamDataRespToAll(&in)
 			}
 		}

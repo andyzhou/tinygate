@@ -10,7 +10,7 @@ import (
 )
 
 /*
- * gate client demo, for tcp server side.
+ * gate client demo, for tcp/ws server side.
  */
 
 const (
@@ -63,7 +63,7 @@ func main()  {
 	//set log
 	c.SetLog("log", "client")
 
-	//add gate server
+	//add sub gate server
 	bRet := c.AddGateServer(gateServerKind, gateServer, gatePort)
 	if !bRet {
 		fmt.Println("add gate server failed")
@@ -148,7 +148,7 @@ func sendStreamDataToGate(c *gate.Client) {
 				if in.MessageId < messageIdStart {
 					in.MessageId = messageIdStart
 				}
-				messageData = fmt.Sprintf("%d-%d", in.MessageId, time.Now().Unix())
+				messageData = fmt.Sprintf("%v-%v", in.MessageId, time.Now().Unix())
 				in.Data = []byte(messageData)
 
 				//cast to all gate server

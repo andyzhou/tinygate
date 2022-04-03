@@ -17,6 +17,7 @@ import (
  * - service api for sub service side
  * - base on g-rpc
  * - receive request from client side
+ * - communicate pass rpc protocol
  */
 
 //service info
