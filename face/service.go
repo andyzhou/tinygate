@@ -1,8 +1,8 @@
 package face
 
 import (
-	"github.com/andyzhou/gate/define"
-	pb "github.com/andyzhou/gate/proto"
+	"github.com/andyzhou/tinygate/define"
+	pb "github.com/andyzhou/tinygate/proto"
 	"log"
 )
 

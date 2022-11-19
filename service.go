@@ -1,11 +1,10 @@
-package gate
+package tinygate
 
 import (
 	"fmt"
-	"github.com/andyzhou/gate/face"
-	"github.com/andyzhou/gate/iface"
-	"github.com/andyzhou/gate/proto"
-	"github.com/andyzhou/gate/rpc"
+	"github.com/andyzhou/tinygate/face"
+	"github.com/andyzhou/tinygate/iface"
+	"github.com/andyzhou/tinygate/rpc"
 	"google.golang.org/grpc"
 	"log"
 	"net"

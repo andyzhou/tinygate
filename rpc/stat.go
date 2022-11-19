@@ -2,7 +2,7 @@ package rpc
 
 import (
 	"context"
-	"github.com/andyzhou/gate/iface"
+	"github.com/andyzhou/tinygate/iface"
 	"google.golang.org/grpc/stats"
 	"log"
 )
@@ -17,7 +17,6 @@ import (
 type Stat struct {
 	node iface.INode
 	base *Base
-	//connMap map[*stats.ConnTagInfo]string
 }
 
 //construct
@@ -25,7 +24,6 @@ func NewStat(node iface.INode) *Stat {
 	this := &Stat{
 		node: node,
 		base:new(Base),
-		//connMap:make(map[*stats.ConnTagInfo]string),
 	}
 	return this
 }
@@ -52,21 +50,18 @@ func (h *Stat) HandleConn(ctx context.Context, s stats.ConnStats) {
 		log.Fatal("Stat::HandleConn, can not get conn tag")
 		return
 	}
-
 	//do relate opt by connect stat type
 	switch s.(type) {
 	case *stats.ConnBegin:
 		//client node connect
-		log.Println("Stat::HandleConn, client node up, tag:", tag)
+		log.Printf("Stat::HandleConn, client node up, tag:%v", tag)
 		//nodeFace.NodeUp(tag, tag.RemoteAddr.String())
-
 	case *stats.ConnEnd:
 		//client node down
-		log.Println("Stat::HandleConn, client node down, tag:", tag)
+		log.Printf("Stat::HandleConn, client node down, tag:%v", tag)
 		if h.node != nil {
 			h.node.ClientNodeDown(tag.RemoteAddr.String())
 		}
-
 	default:
 		log.Printf("illegal ConnStats type\n")
 	}

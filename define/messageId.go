@@ -8,11 +8,6 @@ package define
  const (
  	MessageIdOfNodeUp = iota //node up
  	MessageIdOfBindOrUnbind //player node bind or unbind
+	 MessageIdOfHeartBeat
  	MessageIdOfClientClosed //tcp client disconnect
  )
-
- ////special message tag
- //const (
- //	MessageTagOfHeartBeat = "heartBeat"
- //	MessageTagOfLogin = "login"
- //)

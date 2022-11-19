@@ -2,15 +2,15 @@ package main
 
 import (
 	"fmt"
-	"github.com/andyzhou/gate"
-	pb "github.com/andyzhou/gate/proto"
+	"github.com/andyzhou/tinygate"
+	pb "github.com/andyzhou/tinygate/proto"
 	"math/rand"
 	"sync"
 	"time"
 )
 
 /*
- * gate client demo, for tcp/ws server side.
+ * gate client demo, for tcp/ws origin data server side.
  */
 
 const (
@@ -53,7 +53,7 @@ func main()  {
 	}(wg)
 
 	//init client
-	c := gate.NewClient()
+	c := tinygate.NewClient()
 
 	//set relate cb
 	c.SetCBForGateServerDown(cbForGateServerDown)
@@ -82,7 +82,7 @@ func main()  {
 }
 
 //send general request to gate
-func sendGenReqToGate(c *gate.Client)  {
+func sendGenReqToGate(c *tinygate.Client)  {
 	var (
 		in = pb.GateReq{}
 		ticker = time.NewTicker(time.Second / 10)
@@ -121,7 +121,7 @@ func sendGenReqToGate(c *gate.Client)  {
 }
 
 //send stream data to gate
-func sendStreamDataToGate(c *gate.Client) {
+func sendStreamDataToGate(c *tinygate.Client) {
 	var (
 		in = pb.ByteMessage{}
 		ticker = time.NewTicker(time.Second * 2)

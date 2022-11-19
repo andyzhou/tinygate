@@ -1,5 +1,6 @@
 syntax="proto3";
 package gate;
+option go_package = "github.com/andyzhou/tinygate";
 option java_package = "com.tc.gate";
 
 //define node status
@@ -7,6 +8,7 @@ enum NodeStatus {
     NODE_DOWN = 0;
     NODE_UP = 1;
     NODE_MAINTAIN = 2;
+    NODE_ACTIVE = 3;
 }
 
 //auth info
@@ -19,29 +21,28 @@ message AccessAuth {
 message ByteMessage {
     string service = 1; //service kind
     uint32 messageId = 2; //message id
-    uint32 connId = 3; //tcp connect id
-    int64 playerId = 4; //from or to player id
-    bytes data = 5; //json byte data
-    repeated uint32 castConnIds = 6 [packed=true];//connect id slice for cast
+    bytes data = 3; //byte data
+    string address = 4; //assigned address, option field
+    repeated uint32 connIds = 5 [packed=true]; //tcp,ws connect ids, option field
 }
 
 //general request
 message GateReq {
     string service = 1; //service kind
     uint32 messageId = 2; //message id
-    string address = 3; //assigned address
-    bytes data = 4; //json byte data
-    bool isAsync = 5; //async mode switcher
-    AccessAuth auth = 6; //option
+    bytes data = 3; //byte data
+    string address = 4; //assigned address, option field
+    bool isAsync = 5; //async mode switcher, option field
+    AccessAuth auth = 6; //access auth, option field
 }
 
 //general response
 message GateResp {
     string service = 1; //service kind
     uint32 messageId = 2; //message id
-    int32  errorCode = 3;
-    string errorMessage = 4;
-    bytes data = 5; //json byte data
+    bytes data = 3; //byte data
+    int32  errorCode = 4;
+    string errorMessage = 5;
 }
 
 //define service
@@ -50,6 +51,6 @@ service GateService {
     //cast or receive data between gate and target service
     rpc BindStream(stream ByteMessage) returns(stream ByteMessage);
 
-    //general sync mode
+    //general mode
     rpc GenReq(GateReq) returns(GateResp);
 }

@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/andyzhou/gate"
-	pb "github.com/andyzhou/gate/proto"
+	"github.com/andyzhou/tinygate"
+	pb "github.com/andyzhou/tinygate/proto"
 	"log"
 	"math/rand"
 	"sync"
@@ -51,7 +51,7 @@ func main() {
 	}(wg)
 
 	//init
-	s := gate.NewService(rpcPort)
+	s := tinygate.NewService(rpcPort)
 	
 	//set cb
 	//cb for stream data request process
@@ -75,7 +75,7 @@ func main() {
 }
 
 //send data to gate client
-func sendDataToGateClient(s *gate.Service) {
+func sendDataToGateClient(s *tinygate.Service) {
 	var (
 		messageId int
 		msgPara = "server side message %v"

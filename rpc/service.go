@@ -3,11 +3,12 @@ package rpc
 import (
 	"context"
 	"errors"
-	"github.com/andyzhou/gate/define"
-	"github.com/andyzhou/gate/iface"
-	pb "github.com/andyzhou/gate/proto"
+	"github.com/andyzhou/tinygate/define"
+	"github.com/andyzhou/tinygate/iface"
+	pb "github.com/andyzhou/tinygate/proto"
 	"io"
 	"log"
+	"sync"
 )
 
 /*
@@ -31,8 +32,9 @@ import (
  	cbForStreamReq func(remoteAddr string, req *pb.ByteMessage) bool //cb for client stream request
  	cbForGenReq func(req *pb.GateReq) *pb.GateResp //cb for client gen request
 	respChan chan Response //chan for send response
-	closeChan chan bool
+	closeChan chan struct{}
  	Base
+ 	sync.RWMutex
  }
 
  //construct, step-1
@@ -41,9 +43,8 @@ func NewService() *Service {
 	this := &Service{
 		clientStreamMap: make(map[string]pb.GateService_BindStreamServer),
 		respChan:make(chan Response, define.ResponseChanSize),
-		closeChan:make(chan bool, 1),
+		closeChan:make(chan struct{}, 1),
 	}
-
 	return this
 }
 
@@ -52,39 +53,47 @@ func (r *Service) Quit() {
 	//catch panic
 	defer func() {
 		if err := recover(); err != nil {
-			log.Println("rpc Service:Quit panic, err:", err)
+			log.Printf("rpc Service:Quit panic, err:%v", err)
 		}
 	}()
 
 	//send to close chan
-	r.closeChan <- true
+	close(r.closeChan)
 }
  
-//set not face
-func (r *Service) SetNodeFace(node iface.INode) bool {
+//set node face
+func (r *Service) SetNodeFace(node iface.INode) error {
+	//check
 	if node == nil {
-		return false
+		return errors.New("nod is nil")
 	}
+	//sync with locker
+	r.Lock()
+	defer r.Unlock()
 	r.node = node
-	return true
+	return nil
 }
 
 //set cb for client general request
-func (r *Service) SetCBForGenReq(cb func(req *pb.GateReq) *pb.GateResp) bool {
+func (r *Service) SetCBForGenReq(cb func(req *pb.GateReq) *pb.GateResp) error {
 	if cb == nil {
-		return false
+		return errors.New("invalid parameter")
 	}
+	r.Lock()
+	defer r.Unlock()
 	r.cbForGenReq = cb
-	return true
+	return nil
 }
 
 //set cb for client stream request
-func (r *Service) SetCBForStreamReq(cb func(remoteAddr string, req *pb.ByteMessage) bool) bool {
+func (r *Service) SetCBForStreamReq(cb func(remoteAddr string, req *pb.ByteMessage) bool) error {
 	if cb == nil {
-		return false
+		return errors.New("invalid parameter")
 	}
+	r.Lock()
+	defer r.Unlock()
 	r.cbForStreamReq = cb
-	return true
+	return nil
 }
 
  //send stream data to remote client
@@ -149,7 +158,9 @@ func (r *Service) BindStream(stream pb.GateService_BindStreamServer) error {
 	remoteAddr = tag.RemoteAddr.String()
 
 	//add remote stream into map
+	r.Lock()
 	r.clientStreamMap[remoteAddr] = stream
+	r.Unlock()
 
 	//client node up
 	r.node.ClientNodeUp(remoteAddr, &stream)
@@ -160,7 +171,9 @@ func (r *Service) BindStream(stream pb.GateService_BindStreamServer) error {
 			log.Println("Stream::BindStream panic, err:", err)
 		}
 		//clean up
+		r.Lock()
 		delete(r.clientStreamMap, remoteAddr)
+		r.Unlock()
 	}()
 
 	//try receive stream data from node
@@ -177,8 +190,7 @@ func (r *Service) BindStream(stream pb.GateService_BindStreamServer) error {
 				return nil
 			}
 			if err != nil {
-				log.Println("Stream::BindStream, " +
-							"Read error:", err.Error())
+				log.Printf("Stream::BindStream, Read error:%v", err.Error())
 				return err
 			}
 
@@ -197,6 +209,5 @@ func (r *Service) BindStream(stream pb.GateService_BindStreamServer) error {
 			}
 		}
 	}
-
 	return nil
 }

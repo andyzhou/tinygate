@@ -2,9 +2,9 @@ package face
 
 import (
 	"fmt"
-	"github.com/andyzhou/gate/define"
-	"github.com/andyzhou/gate/iface"
-	pb "github.com/andyzhou/gate/proto"
+	"github.com/andyzhou/tinygate/define"
+	"github.com/andyzhou/tinygate/iface"
+	pb "github.com/andyzhou/tinygate/proto"
 	"log"
 	"sync"
 	"time"

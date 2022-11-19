@@ -1,7 +1,7 @@
 package iface
 
 import (
-	pb "github.com/andyzhou/gate/proto"
+	pb "github.com/andyzhou/tinygate/proto"
 )
 
 /*

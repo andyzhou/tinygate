@@ -1,6 +1,6 @@
 package iface
 
-import pb "github.com/andyzhou/gate/proto"
+import pb "github.com/andyzhou/tinygate/proto"
 
 /*
  * interface for gate for client side

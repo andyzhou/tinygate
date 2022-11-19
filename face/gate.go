@@ -3,9 +3,9 @@ package face
 import (
 	"context"
 	"fmt"
-	"github.com/andyzhou/gate/define"
-	"github.com/andyzhou/gate/json"
-	pb "github.com/andyzhou/gate/proto"
+	"github.com/andyzhou/tinygate/define"
+	"github.com/andyzhou/tinygate/json"
+	pb "github.com/andyzhou/tinygate/proto"
 	"google.golang.org/grpc"
 	"io"
 	"log"

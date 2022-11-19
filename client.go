@@ -1,9 +1,9 @@
-package gate
+package tinygate
 
 import (
-	"github.com/andyzhou/gate/face"
-	"github.com/andyzhou/gate/iface"
-	pb "github.com/andyzhou/gate/proto"
+	"github.com/andyzhou/tinygate/face"
+	"github.com/andyzhou/tinygate/iface"
+	pb "github.com/andyzhou/tinygate/proto"
 )
 
 /*
