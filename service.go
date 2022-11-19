@@ -1,9 +1,11 @@
 package tinygate
 
 import (
+	"errors"
 	"fmt"
 	"github.com/andyzhou/tinygate/face"
 	"github.com/andyzhou/tinygate/iface"
+	pb "github.com/andyzhou/tinygate/proto"
 	"github.com/andyzhou/tinygate/rpc"
 	"google.golang.org/grpc"
 	"log"
@@ -69,19 +71,19 @@ func (r *Service) Start() {
 
 //send stream data to gate client by remote address
 func (r *Service) SendStreamDataResp(
-					resp *gate.ByteMessage,
+					resp *pb.ByteMessage,
 					address ...string,
-				) bool {
+				) error {
 	var (
 		subService iface.IService
 	)
 
 	//basic check
 	if address == nil || resp == nil {
-		return false
+		return errors.New("invalid parameter")
 	}
 	if r.node == nil {
-		return false
+		return errors.New("nod is nil")
 	}
 
 	//send one by one
@@ -95,30 +97,29 @@ func (r *Service) SendStreamDataResp(
 		//cast resp stream data to client node
 		subService.SendClientResp(resp)
 	}
-
-	return true
+	return nil
 }
 
 //send stream data to all gate clients
 func (r *Service) SendStreamDataRespToAll(
-					resp *gate.ByteMessage,
-				) bool {
+					resp *pb.ByteMessage,
+				) error {
 	//basic check
 	if resp == nil || r.node == nil {
-		return false
+		return errors.New("invalid parameter")
 	}
 
 	//get all sub service
 	allSubService := r.node.GetAllService()
 	if allSubService == nil || len(allSubService) <= 0 {
-		return false
+		return errors.New("no any sub service")
 	}
 
 	//send one by one
 	for _, service := range allSubService {
 		service.SendClientResp(resp)
 	}
-	return true
+	return nil
 }
 
 ///////////////////
@@ -134,12 +135,12 @@ func (r *Service) SetCBForClientNodeDown(cb func(remoteAddr string) bool) bool {
 }
 
 //set cb of stream request from gate client
-func (r *Service) SetCBForStreamReq(cb func(remoteAddr string, in *gate.ByteMessage) bool) bool {
+func (r *Service) SetCBForStreamReq(cb func(remoteAddr string, in *pb.ByteMessage) bool) error {
 	return r.rpc.SetCBForStreamReq(cb)
 }
 
 //set cb of response for general request from gate client
-func (r *Service) SetCBForGenReq(cb func(req *gate.GateReq) *gate.GateResp) bool {
+func (r *Service) SetCBForGenReq(cb func(req *pb.GateReq) *pb.GateResp) error {
 	return r.rpc.SetCBForGenReq(cb)
 }
 
@@ -166,7 +167,7 @@ func (r *Service) createService() {
 				)
 
 	//register call back
-	gate.RegisterGateServiceServer(r.service, r.rpc)
+	pb.RegisterGateServiceServer(r.service, r.rpc)
 
 	//begin rpc service
 	go r.beginService(listen)
