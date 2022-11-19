@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/andyzhou/tinygate"
 	pb "github.com/andyzhou/tinygate/proto"
+	"log"
 	"math/rand"
 	"sync"
 	"time"
@@ -47,7 +48,7 @@ func main()  {
 	//try catch panic
 	defer func(wg *sync.WaitGroup) {
 		if err := recover(); err != nil {
-			fmt.Println("panic, err:", err)
+			log.Println("panic, err:", err)
 			wg.Done()
 		}
 	}(wg)
@@ -66,19 +67,19 @@ func main()  {
 	//add sub gate server
 	bRet := c.AddGateServer(gateServerKind, gateServer, gatePort)
 	if !bRet {
-		fmt.Println("add gate server failed")
+		log.Println("add gate server failed")
 		return
 	}
 
 	//wg add
 	wg.Add(1)
-	fmt.Println("start client..")
+	log.Println("start client..")
 
 	//go sendGenReqToGate(c)
 	go sendStreamDataToGate(c)
 
 	wg.Wait()
-	fmt.Println("stop client..")
+	log.Println("stop client..")
 }
 
 //send general request to gate
@@ -113,7 +114,7 @@ func sendGenReqToGate(c *tinygate.Client)  {
 				//send general request to gate server
 				resp := c.SendGenReq(&in)
 				if resp != nil {
-					fmt.Println("client resp, resp:", resp)
+					log.Println("client resp, resp:", resp)
 				}
 			}
 		}
@@ -131,7 +132,7 @@ func sendStreamDataToGate(c *tinygate.Client) {
 	//defer
 	defer func() {
 		ticker.Stop()
-		fmt.Println("sendStreamDataToGate done.")
+		log.Println("sendStreamDataToGate done.")
 	}()
 
 	//loop

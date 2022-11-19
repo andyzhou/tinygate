@@ -45,7 +45,7 @@ func main() {
 	//try catch panic
 	defer func(wg *sync.WaitGroup) {
 		if err := recover(); err != nil {
-			fmt.Println("panic, err:", err)
+			log.Println("panic, err:", err)
 			wg.Done()
 		}
 	}(wg)
