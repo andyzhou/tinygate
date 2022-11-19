@@ -1,3 +1,5 @@
 .idea
 *_darwin
 *.log
+server
+client
